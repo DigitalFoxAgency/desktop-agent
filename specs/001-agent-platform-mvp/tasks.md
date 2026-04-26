@@ -119,6 +119,7 @@ is complete and `dotnet test` is green.
 - [ ] T055 [P] Create design tokens + base styles in `src/AgentDesktop.Desktop/Theme/Tokens.axaml` (color, spacing, typography)
 - [ ] T056 [P] Create localisation infrastructure in `src/AgentDesktop.Desktop/Resources/Strings.resx` and `LocalizationProvider.cs` (English-only at MVP, externalised)
 - [ ] T057 [P] Add UI-thread watchdog (debug-only) in `src/AgentDesktop.Desktop/Diagnostics/UiThreadWatchdog.cs` asserting no >50 ms synchronous work per frame (constitution Principle IV)
+- [ ] T123 [P] Contract test `IRuntimeManager` in `tests/AgentDesktop.Contracts.Tests/RuntimeManagerContractTests.cs` covering the documented state machine (`NotInstalled → Installing → Starting → Ready → Degraded → Stopped`), illegal transitions throw, `InvokeSkillAsync` throws a typed exception naming current status when not `Ready`, `StreamChatAsync` finalises exactly once with `IsFinal=true`, double dispose is a no-op (idempotent). Runs against `FakeRuntimeManager` only at MVP; the same tests are reused against `ProcessRuntimeManager` in Phase 7 behind the `RequiresLiveRuntime` trait
 
 **Checkpoint**: Foundational ready — all interfaces, fakes, and
 schema in place; `dotnet test` green; user-story phases may begin.
@@ -157,6 +158,7 @@ reopen → conversation present in history.
 - [ ] T072 [US1] Wire `Program.cs` to register `ChatService`, `SqliteChatRepository`, `HttpSubscriptionGate`, `SecretStoreFactory`, `IClock`
 - [ ] T073 [US1] Implement `Api/Endpoints/SubscriptionEndpoints.cs` — `POST /v1/subscription/validate` returning subscription status (depends on T072 only conceptually; lives in `Api`)
 - [ ] T074 [US1] End-to-end smoke test using `FakeRuntimeManager` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/SignInAndChatTests.cs` (sign in → send message → assert chunks render → restart simulation → assert history persisted)
+- [ ] T124 [US1] Application test `ChatService` honours `ISubscriptionGate` in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceSubscriptionTests.cs` — covers FR-023: when `ISubscriptionGate` reports `Expired` / `Revoked` / out-of-grace `Unknown`, `ChatService.SendMessageAsync` MUST refuse, surface a `System` message naming the recovery path, leave existing conversations readable via `GetConversationAsync` / `ListConversationsAsync`, and emit no runtime call. Re-enable on transition back to `Active`
 
 **Checkpoint**: US1 fully functional. SC-001 (≤5 min onboarding),
 SC-002 (≤2 s first chunk), SC-006 (≤2 s history restore) measurable.
@@ -228,10 +230,11 @@ steps emits `ScenarioCancelled` and skips the rest.
 - [ ] T097 [P] [US2] Implement `SessionLogReader : ISessionLog` in `src/AgentDesktop.Infrastructure/Manifests/SessionLogReader.cs` (parses `[<skill>: verified]` markers in the launchpad's `SESSION-LOG.md`; satisfies launchpad constitution §8 gating in scenarios)
 - [ ] T098 [US2] Wire `ScenarioRunner` precondition check that requires `verificationKey` in `SESSION-LOG.md` before a downstream step starts (mirrors launchpad §5/§8); failure emits `StepFailed` with a clear reason
 - [ ] T099 [P] [US2] Implement `ScenarioCatalogViewModel` and `ScenarioCatalogView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
-- [ ] T100 [P] [US2] Implement `ScenarioRunViewModel` and `ScenarioRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — binds the `IAsyncEnumerable<ScenarioEvent>` stream, renders per-step progress, reuses `ConfirmationDialog`
-- [ ] T101 [US2] Implement human-skill hand-off prompt in `src/AgentDesktop.Desktop/Views/HumanHandoffDialog.axaml` (paused-with-instructions UI for `kind: human` skills like Discovery brief)
+- [ ] T100 [P] [US2] Implement `ScenarioRunViewModel` and `ScenarioRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — binds the `IAsyncEnumerable<ScenarioEvent>` stream, renders per-step progress, reuses `ConfirmationDialog`. Includes per-view a11y assertion (focus order across step list, screen-reader labels on progress chips, contrast check on event log) in the corresponding headless test under `tests/AgentDesktop.Desktop.Tests/Views/ScenarioRunViewTests.cs` (constitution Principle III)
+- [ ] T101 [US2] Implement human-skill hand-off prompt in `src/AgentDesktop.Desktop/Views/HumanHandoffDialog.axaml` (paused-with-instructions UI for `kind: human` skills like Discovery brief). Includes per-view a11y assertion (focus trapped while open, instructions read by screen reader, "mark done" button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/HumanHandoffDialogTests.cs` (constitution Principle III)
 - [ ] T102 [US2] Register `ModuleRegistry`, `ScenarioRegistry`, `ScenarioRunner`, `FileSystemModuleSource` (configured to read `modules/`), `FileSystemScenarioSource` (configured to read `scenarios/`), `SessionLogReader` in `Program.cs`
 - [ ] T103 [US2] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/OnboardClientScenarioTests.cs` — launches `onboard-client` via UI under `FakeRuntimeManager`, asserts step 0 is `init`, asserts `StepConfirmationRequested` fires before any side effect, asserts cancellation midway emits `ScenarioCancelled`
+- [ ] T125 [US2] Headless test `OnboardClient human-handoff pauses` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/OnboardClientHumanHandoffTests.cs` — covers SC-005: drives `onboard-client` to the `brief` step (`kind: human`), asserts the runner emits a pause event and `HumanHandoffDialog` opens with the launchpad's hand-off instructions, asserts no `StepCompleted` fires until the human marks it done; repeats for `offer` and (if reached) `ads`
 
 **Checkpoint**: US2 fully functional. The `df-client-launchpad`
 module + all three scenarios load and run end-to-end against a
@@ -250,13 +253,13 @@ directly without going through a scenario.
 ### Tests for User Story 4
 
 - [ ] T104 [P] [US4] Contract test for direct skill invocation use case in `tests/AgentDesktop.Contracts.Tests/SkillInvocationContractTests.cs` — happy path through `IPolicyEngine`, missing-required-input refusal, dangerous skill prompts confirmation
-- [ ] T105 [P] [US4] Headless test for `ModuleCatalogView` in `tests/AgentDesktop.Desktop.Tests/Views/ModuleCatalogViewTests.cs` (renders 17 skills, keyboard navigation between them)
+- [ ] T105 [P] [US4] Headless test for `ModuleCatalogView` in `tests/AgentDesktop.Desktop.Tests/Views/ModuleCatalogViewTests.cs` (renders 17 skills, keyboard navigation between them, screen-reader labels on each row, focus order matches visual order, contrast on classification badges) — full a11y assertion per constitution Principle III
 
 ### Implementation for User Story 4
 
 - [ ] T106 [P] [US4] Implement `SkillInvocationService` in `src/AgentDesktop.Application/Modules/SkillInvocationService.cs` (validates inputs, evaluates via `IPolicyEngine`, dispatches via `IRuntimeManager`, persists output as a `Message`)
 - [ ] T107 [P] [US4] Implement `ModuleCatalogViewModel` and `ModuleCatalogView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
-- [ ] T108 [P] [US4] Implement `SkillRunViewModel` and `SkillRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — input form generated from `SkillParameter[]`, refuses to run until required fields are filled
+- [ ] T108 [P] [US4] Implement `SkillRunViewModel` and `SkillRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — input form generated from `SkillParameter[]`, refuses to run until required fields are filled. Includes per-view a11y assertion (every input has an associated label, error messages announced to screen reader, submit button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/SkillRunViewTests.cs` (constitution Principle III)
 - [ ] T109 [US4] Register `SkillInvocationService` in `Program.cs`
 - [ ] T110 [US4] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/DirectSkillInvocationTests.cs` — pick `pre-research` skill, supply input, assert output rendered, no confirmation prompt (skill is `safe`)
 
@@ -269,10 +272,19 @@ directly without going through a scenario.
 **Purpose**: Constitution gates (perf, a11y, security), packaging,
 docs.
 
+> **FR-017 caveat**: "All agent-initiated activity that touches
+> the user's machine MUST run inside the sandboxed runtime layer;
+> activity that bypasses the sandbox MUST be refused" is testable
+> only against the **real** `ProcessRuntimeManager` (T111). MVP
+> demos against `FakeRuntimeManager` (Phases 3–6) cannot exercise
+> sandbox-escape refusal. SC-007 explicitly accepts this trade-off
+> in exchange for a green automated suite without OpenClaw /
+> NemoClaw installed.
+
 - [ ] T111 [P] Implement `ProcessRuntimeManager : IRuntimeManager` in `src/AgentDesktop.Infrastructure/Runtime/ProcessRuntimeManager.cs` (real OpenClaw + NemoClaw orchestration over JSON-RPC stdio) — gated behind `RequiresLiveRuntime` for CI
 - [ ] T112 [P] Implement `McpClient` and `McpServerLauncher` in `src/AgentDesktop.Infrastructure/Mcp/` (routes MCP processes through the sandbox)
-- [ ] T113 [P] BenchmarkDotNet baselines in `tests/AgentDesktop.Bench/` — `RuntimeStartupBenchmarks.cs`, `ChatRoundTripBenchmarks.cs`, `ScenarioStepLatencyBenchmarks.cs`; commit baseline results under `tests/AgentDesktop.Bench/baseline/`
-- [ ] T114 [P] CI: enforce coverage thresholds in `.github/workflows/ci.yml` — ≥90% Domain + Application, ≥80% Infrastructure + Desktop, 100% branch on `DefaultPolicyEngine`, `SqliteChatRepository`, `IRuntimeManager` implementations (constitution Principle II)
+- [ ] T113 [P] BenchmarkDotNet baselines in `tests/AgentDesktop.Bench/` — `RuntimeStartupBenchmarks.cs`, `ChatRoundTripBenchmarks.cs`, `ScenarioStepLatencyBenchmarks.cs`, **`HistoryRestoreLatencyBenchmarks.cs`** (covers SC-006 — measures time from app launch to first conversation rendered, asserts ≤2 s on the per-leg reference machine); commit baseline results under `tests/AgentDesktop.Bench/baseline/`
+- [ ] T114 [P] CI: enforce coverage thresholds in `.github/workflows/ci.yml` — ≥90% Domain + Application, ≥80% Infrastructure + Desktop, **100% branch coverage** for every module that handles user data, IPC boundaries, or filesystem mutations (constitution Principle II): `DefaultPolicyEngine`, `SqliteChatRepository`, `SqliteAuditLog`, `ProcessRuntimeManager`, `FakeRuntimeManager` (programmable surface), `FileSystemModuleSource`, `FileSystemScenarioSource`, `SessionLogReader`, `EncryptedFileSecretStore`, `WindowsDpapiSecretStore`, `MacKeychainSecretStore`, `LinuxSecretStore`
 - [ ] T115 [P] CI: a11y gate using Avalonia.Headless assertions across every shipped view (focus order, label association, contrast, target size)
 - [ ] T116 [P] CI: dependency vulnerability scan (`dotnet list package --vulnerable`) and secret scan (gitleaks); fail on high-severity findings
 - [ ] T117 [P] CI: perf-regression gate fails on >10% regression vs `tests/AgentDesktop.Bench/baseline/`

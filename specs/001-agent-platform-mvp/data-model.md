@@ -218,6 +218,22 @@ The persisted outcome.
 - Every `DangerousAction` produced by the engine MUST land as a
   `PolicyDecision` (no orphans). This is enforced by a contract test.
 
+**Mapping to spec FR-022 audit states**: FR-022 enumerates the
+states "proposed, confirmed, declined, executed, succeeded, failed".
+They map onto this model as follows:
+- **proposed** ↦ creation of the `DangerousAction` record
+  (`RequestedAt` timestamp). Every evaluation produces one.
+- **confirmed** ↦ `PolicyOutcome.Confirmed` with `DecidedAt`.
+- **declined** ↦ `PolicyOutcome.Declined` with `DecidedAt`.
+- **executed** ↦ implicit: a `PolicyDecision` whose
+  `ExecutionResult` is non-null indicates execution was attempted.
+- **succeeded** ↦ `PolicyExecutionResult.Succeeded`.
+- **failed** ↦ `PolicyExecutionResult.Failed`.
+
+The audit log (`audit_events`) records each transition as a
+separate row keyed by `PolicyDecisionId`, so the full lifecycle is
+reconstructable for any single dangerous action.
+
 ---
 
 ## 5. Runtime

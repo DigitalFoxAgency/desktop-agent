@@ -55,6 +55,14 @@ Check below. Concretely: cold start to interactive ≤2.0 s on the
 reference machine; first agent token streamed within 2 s of send for
 95% of messages on broadband (SC-002); UI thread never blocks >50 ms
 per frame.
+
+**Reference machine** (used by every constitution Principle IV
+budget and by SC-006): Apple M2 Pro / 16 GB / SSD on macOS 14 for
+the macOS leg; Intel i5-1240P / 16 GB / NVMe on Windows 11 for the
+Windows leg; GitHub Actions `ubuntu-latest` runner for the Linux
+leg. Benchmarks publish per-leg numbers; gates fire on >10%
+regression vs the per-leg baseline rather than against a single
+golden machine.
 **Constraints**:
 - Domain layer MUST NOT reference Avalonia, SQLite, OpenClaw,
   NemoClaw, Stripe, or any file-system / network API.
@@ -94,7 +102,7 @@ defines four non-negotiable principles. This plan addresses each:
 | Principle | How this plan satisfies it |
 |-----------|---------------------------|
 | **I. Code Quality** | Solution enforces `TreatWarningsAsErrors=true`, nullable enabled, Roslyn analyzers + `.editorconfig` shipped at repo root. PR template requires reviewer sign-off; complexity cap enforced by analyzer. Public service interfaces (`IChatService`, `IModuleRegistry`, `IScenarioRunner`, `IPolicyEngine`, `IRuntimeManager`, `ISecretStore`) carry XML doc comments mirrored into `contracts/`. |
-| **II. Testing Standards** | TDD from day one: every service interface has a contract-test fixture before its first adapter ships. Coverage gate in CI: ≥90% for `Domain` and `Application`, ≥80% for `Infrastructure`/`Desktop`, 100% branch coverage for `PolicyEngine`, `ChatRepository`, `RuntimeManager`. Integration tests use real SQLite (file-backed temp DB) and a `FakeRuntimeManager`; mocks only for the model provider HTTP boundary, paired with one contract test against the real provider behind a `RequiresLiveModel` trait. |
+| **II. Testing Standards** | TDD from day one: every service interface has a contract-test fixture before its first adapter ships. Coverage gate in CI: ≥90% for `Domain` and `Application`, ≥80% for `Infrastructure`/`Desktop`, **100% branch coverage** for every module that handles user data, IPC boundaries, or filesystem mutations — concretely: `DefaultPolicyEngine`, `SqliteChatRepository`, `SqliteAuditLog`, `ProcessRuntimeManager`, `FakeRuntimeManager` (its programmable surface), `FileSystemModuleSource`, `FileSystemScenarioSource`, `SessionLogReader`, `EncryptedFileSecretStore`, `WindowsDpapiSecretStore`, `MacKeychainSecretStore`, `LinuxSecretStore`. Integration tests use real SQLite (file-backed temp DB) and `FakeRuntimeManager`; mocks only for the model provider HTTP boundary, paired with one contract test against the real provider behind a `RequiresLiveModel` trait. |
 | **III. UX Consistency** | Single Avalonia design system (`AgentDesktop.Desktop/Theme/`) with tokens for color, spacing, typography. All copy externalised to `.resx` (English-only at MVP, but localisation-ready). Every UI surface tested against axe-core-equivalent (Avalonia.Headless + a11y assertions). Confirmation prompt is one shared component reused for every dangerous action so wording and affordances stay identical. |
 | **IV. Performance** | Budgets declared up front (see Technical Context). Benchmark project `AgentDesktop.Bench` runs in CI on every PR with BenchmarkDotNet for runtime-manager startup, scenario step latency, and chat message round-trip; CI fails on >10% regression vs. baseline. Long-running work (runtime install, scenario execution, model streaming) runs on background tasks; UI thread asserts no synchronous I/O via a debug-only watchdog. |
 
@@ -156,7 +164,7 @@ src/
 │   ├── Persistence/Sqlite/         # SqliteChatRepository, SqliteAuditLog, migrations
 │   ├── Manifests/                  # FileSystemModuleSource, FileSystemScenarioSource (JSON/YAML)
 │   ├── Secrets/                    # WindowsDpapiSecretStore, MacKeychainSecretStore, LinuxSecretStore, EncryptedFileSecretStore
-│   ├── Runtime/                    # ProcessRuntimeManager (OpenClaw + NemoClaw), FakeRuntimeManager (test)
+│   ├── Runtime/                    # ProcessRuntimeManager (OpenClaw + NemoClaw); FakeRuntimeManager lives in tests/AgentDesktop.Contracts.Tests/Fakes/, NOT here
 │   ├── Mcp/                        # McpClient, McpServerLauncher
 │   └── Subscription/               # HttpSubscriptionGate
 │
@@ -251,7 +259,7 @@ checkout) that:
 
 | Scenario | Purpose | Steps |
 |----------|---------|-------|
-| `onboard-client` | Phase 1 — full client onboarding from intake to live site. | `init → pre-research → brief → research → semantics → strategy → strategy-pdf → offer → architecture → design → site → integrations → seo → deploy` (`keywords` is exposed as a direct skill, not in the scenario, matching `ORDER.md`). |
+| `onboard-client` | Phase 1 — full client onboarding from intake to live site. | Non-optional Phase 1 skills in `ORDER.md` order: `init → pre-research → brief → research → semantics → strategy → strategy-pdf → offer → architecture → design → site → integrations → seo → deploy`. (`keywords` is the only optional Phase 1 skill in `ORDER.md`; it is exposed as a direct skill rather than included in this scenario.) |
 | `launch-ads` | Phase 2 — ads kickoff once the site is live. | `ads`. |
 | `monthly-report` | Phase 2 — recurring reporting. | `reporting`. |
 
