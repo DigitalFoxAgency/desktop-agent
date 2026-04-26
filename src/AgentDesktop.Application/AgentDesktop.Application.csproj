@@ -12,4 +12,12 @@
   <ItemGroup>
     <ProjectReference Include="..\AgentDesktop.Domain\AgentDesktop.Domain.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Modules\module.schema.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NJsonSchema" />
+  </ItemGroup>
 </Project>
