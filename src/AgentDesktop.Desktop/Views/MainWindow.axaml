@@ -1,20 +1,62 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AgentDesktop.Desktop.ViewModels"
+        xmlns:views="using:AgentDesktop.Desktop.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:aut="using:Avalonia.Automation"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="640"
         x:Class="AgentDesktop.Desktop.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
+        x:DataType="vm:ShellViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="AgentDesktop.Desktop">
+        Title="AgentDesktop"
+        Width="1024" Height="640"
+        MinWidth="640" MinHeight="400">
 
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
+    <Grid RowDefinitions="*,Auto">
+        <ContentControl Grid.Row="0"
+                        x:Name="ShellContent"
+                        Content="{Binding}"
+                        aut:AutomationProperties.Name="Shell content">
+            <ContentControl.ContentTemplate>
+                <DataTemplate DataType="vm:ShellViewModel">
+                    <Panel>
+                        <!-- Sign-in pane -->
+                        <ContentControl Content="{Binding SignIn}"
+                                        IsVisible="{Binding !IsSignedIn}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate DataType="vm:SignInViewModel">
+                                    <views:SignInView />
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <!-- Chat shell -->
+                        <Grid IsVisible="{Binding IsSignedIn}" ColumnDefinitions="280,*">
+                            <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="#22000000">
+                                <ContentControl Content="{Binding Conversations}">
+                                    <ContentControl.ContentTemplate>
+                                        <DataTemplate DataType="vm:ConversationListViewModel">
+                                            <views:ConversationListView />
+                                        </DataTemplate>
+                                    </ContentControl.ContentTemplate>
+                                </ContentControl>
+                            </Border>
+                            <ContentControl Grid.Column="1" Content="{Binding Chat}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate DataType="vm:ChatViewModel">
+                                        <views:ChatView />
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+                        </Grid>
+                    </Panel>
+                </DataTemplate>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
 
+        <Border Grid.Row="1" Padding="8,4" Background="#11000000">
+            <TextBlock Text="{Binding StatusBanner}" Opacity="0.8" />
+        </Border>
+    </Grid>
 </Window>

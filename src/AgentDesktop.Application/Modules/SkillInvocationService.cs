@@ -101,6 +101,17 @@ public sealed class SkillInvocationService
                     "Skill '{Skill}' invocation declined: {Outcome}.",
                     skillId,
                     decision.Outcome);
+
+                // T084: surface the outcome as a System message so the user
+                // sees their decline reflected in chat. The PolicyDecisionId
+                // is included so the audit log is reachable from the message.
+                await PersistPolicyOutcomeMessageAsync(
+                    conversationId,
+                    moduleId,
+                    skillId,
+                    decision,
+                    ct).ConfigureAwait(false);
+
                 return new SkillInvocationResult(
                     Succeeded: false,
                     Outputs: new Dictionary<string, object?>(),
@@ -130,6 +141,32 @@ public sealed class SkillInvocationService
         }
 
         return result;
+    }
+
+    private async Task PersistPolicyOutcomeMessageAsync(
+        ConversationId conversationId,
+        ModuleId moduleId,
+        SkillId skillId,
+        PolicyDecision decision,
+        CancellationToken ct)
+    {
+        var convo = await _chat.GetAsync(conversationId, ct).ConfigureAwait(false);
+        if (convo is null)
+        {
+            return;
+        }
+
+        var verb = decision.Outcome.ToString().ToLowerInvariant();
+        var body = $"Skill '{moduleId}/{skillId}' was {verb} (decision {decision.Id}).";
+        var message = new Message(
+            id: MessageId.New(),
+            conversationId: conversationId,
+            index: convo.Messages.Count,
+            author: MessageAuthor.System,
+            body: body,
+            createdAt: _clock.UtcNow,
+            originatingSkill: new SkillRef(moduleId, skillId));
+        await _chat.AppendMessageAsync(message, ct).ConfigureAwait(false);
     }
 
     private static string FormatOutputs(SkillId skillId, IReadOnlyDictionary<string, object?> outputs)

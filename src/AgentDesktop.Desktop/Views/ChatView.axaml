@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AgentDesktop.Desktop.ViewModels"
+             xmlns:aut="using:Avalonia.Automation"
+             x:DataType="vm:ChatViewModel"
+             x:Class="AgentDesktop.Desktop.Views.ChatView">
+    <UserControl.Styles>
+        <Style Selector="Border.bubble">
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,4" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="MaxWidth" Value="640" />
+        </Style>
+        <Style Selector="Border.bubble.user">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Background" Value="#2563EB" />
+        </Style>
+        <Style Selector="Border.bubble.user TextBlock">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Border.bubble.agent">
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Background" Value="#1F2937" />
+        </Style>
+        <Style Selector="Border.bubble.agent TextBlock">
+            <Setter Property="Foreground" Value="#E5E7EB" />
+        </Style>
+        <Style Selector="Border.bubble.system">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#9CA3AF" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Border.bubble.system TextBlock">
+            <Setter Property="Foreground" Value="#9CA3AF" />
+            <Setter Property="FontStyle" Value="Italic" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+        <TextBlock Grid.Row="0"
+                   Text="{Binding ConversationTitle}"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,12" />
+
+        <ScrollViewer Grid.Row="1" x:Name="HistoryScroller">
+            <ItemsControl ItemsSource="{Binding Messages}"
+                          aut:AutomationProperties.Name="Conversation history">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:MessageViewModel">
+                        <Border Classes="bubble"
+                                Classes.user="{Binding IsUser}"
+                                Classes.agent="{Binding IsAgent}"
+                                Classes.system="{Binding IsSystem}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding AuthorLabel}" FontWeight="SemiBold" Opacity="0.7" FontSize="11" />
+                                <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+            <TextBox Grid.Column="0"
+                     x:Name="DraftBox"
+                     Text="{Binding Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Watermark="Type a message…"
+                     AcceptsReturn="False"
+                     IsEnabled="{Binding HasConversation}"
+                     aut:AutomationProperties.Name="Message draft" />
+            <Button Grid.Column="1"
+                    Content="Send"
+                    Margin="8,0,0,0"
+                    Command="{Binding SendCommand}"
+                    IsDefault="True"
+                    aut:AutomationProperties.Name="Send message" />
+        </Grid>
+    </Grid>
+</UserControl>

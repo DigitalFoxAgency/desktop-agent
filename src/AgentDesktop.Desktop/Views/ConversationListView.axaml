@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AgentDesktop.Desktop.ViewModels"
+             xmlns:aut="using:Avalonia.Automation"
+             x:DataType="vm:ConversationListViewModel"
+             x:Class="AgentDesktop.Desktop.Views.ConversationListView">
+    <Grid RowDefinitions="Auto,*" Margin="8">
+        <Button Grid.Row="0"
+                Content="+ New conversation"
+                Command="{Binding NewConversationCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"
+                Margin="0,0,0,8"
+                aut:AutomationProperties.Name="Start new conversation" />
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding Selected, Mode=TwoWay}"
+                 aut:AutomationProperties.Name="Conversation history list">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="vm:ConversationListItemViewModel">
+                    <StackPanel Margin="4,2">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Subtitle}" Opacity="0.6" FontSize="11" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

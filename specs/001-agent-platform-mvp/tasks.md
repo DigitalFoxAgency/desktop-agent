@@ -115,7 +115,7 @@ is complete and `dotnet test` is green.
 
 ### Desktop composition root
 
-- [ ] T054 Create `src/AgentDesktop.Desktop/Program.cs` — CLI args (`--fake-runtime`), DI registration of Application + Infrastructure (the only Infrastructure-aware file in `Desktop`)
+- [x] T054 Create `src/AgentDesktop.Desktop/Program.cs` — CLI args (`--fake-runtime`), DI registration of Application + Infrastructure (the only Infrastructure-aware file in `Desktop`)
 - [ ] T055 [P] Create design tokens + base styles in `src/AgentDesktop.Desktop/Theme/Tokens.axaml` (color, spacing, typography)
 - [ ] T056 [P] Create localisation infrastructure in `src/AgentDesktop.Desktop/Resources/Strings.resx` and `LocalizationProvider.cs` (English-only at MVP, externalised)
 - [ ] T057 [P] Add UI-thread watchdog (debug-only) in `src/AgentDesktop.Desktop/Diagnostics/UiThreadWatchdog.cs` asserting no >50 ms synchronous work per frame (constitution Principle IV)
@@ -141,7 +141,7 @@ reopen → conversation present in history.
 - [x] T058 [P] [US1] Contract test `IChatService` in `tests/AgentDesktop.Contracts.Tests/ChatServiceContractTests.cs`: persists user message before runtime call, exactly one `IsFinal=true` chunk, cancellation leaves consistent state, `Degraded` runtime emits `System` message + final chunk
 - [x] T059 [P] [US1] Integration test `SqliteChatRepository` round-trip in `tests/AgentDesktop.Infrastructure.Tests/Persistence/SqliteChatRepositoryTests.cs` (real file-backed temp DB)
 - [x] T060 [P] [US1] Integration test `HttpSubscriptionGate` against a `WebApplicationFactory<Program>` of `AgentDesktop.Api` in `tests/AgentDesktop.Infrastructure.Tests/Subscription/HttpSubscriptionGateTests.cs`
-- [ ] T061 [P] [US1] Headless UI test `SignInView` keyboard-only flow in `tests/AgentDesktop.Desktop.Tests/Views/SignInViewTests.cs` (a11y assertion: focus order, label association, contrast)
+- [x] T061 [P] [US1] Headless UI test `SignInView` keyboard-only flow in `tests/AgentDesktop.Desktop.Tests/Views/SignInViewTests.cs` (a11y assertion: focus order, label association, contrast)
 
 ### Implementation for User Story 1
 
@@ -150,14 +150,14 @@ reopen → conversation present in history.
 - [x] T064 [P] [US1] Implement `HttpSubscriptionGate` in `src/AgentDesktop.Infrastructure/Subscription/HttpSubscriptionGate.cs` (HttpClient + token storage via `ISecretStore`)
 - [x] T065 [US1] Implement `ChatService : IChatService` in `src/AgentDesktop.Application/Chat/ChatService.cs` — orchestrates `IChatRepository`, `IRuntimeManager.StreamChatAsync`, `ISubscriptionGate`, surfacing `System` messages on runtime degradation (depends on T062, T063, T065's chunk type from foundational T035)
 - [ ] T066 [US1] Application test for `ChatService` ordering and degradation paths in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceTests.cs` (uses `FakeRuntimeManager`, `FakeChatRepository`)
-- [ ] T067 [P] [US1] Implement `SignInViewModel` in `src/AgentDesktop.Desktop/ViewModels/SignInViewModel.cs` (CommunityToolkit.Mvvm `[ObservableProperty]`/`[RelayCommand]`)
-- [ ] T068 [P] [US1] Implement `SignInView.axaml` in `src/AgentDesktop.Desktop/Views/SignInView.axaml`
-- [ ] T069 [P] [US1] Implement `ChatViewModel` in `src/AgentDesktop.Desktop/ViewModels/ChatViewModel.cs` (binds `IAsyncEnumerable<MessageChunk>`)
-- [ ] T070 [P] [US1] Implement `ChatView.axaml` in `src/AgentDesktop.Desktop/Views/ChatView.axaml`
-- [ ] T071 [P] [US1] Implement `ConversationListViewModel` and `ConversationListView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
-- [ ] T072 [US1] Wire `Program.cs` to register `ChatService`, `SqliteChatRepository`, `HttpSubscriptionGate`, `SecretStoreFactory`, `IClock`
+- [x] T067 [P] [US1] Implement `SignInViewModel` in `src/AgentDesktop.Desktop/ViewModels/SignInViewModel.cs` (CommunityToolkit.Mvvm `[ObservableProperty]`/`[RelayCommand]`)
+- [x] T068 [P] [US1] Implement `SignInView.axaml` in `src/AgentDesktop.Desktop/Views/SignInView.axaml`
+- [x] T069 [P] [US1] Implement `ChatViewModel` in `src/AgentDesktop.Desktop/ViewModels/ChatViewModel.cs` (binds `IAsyncEnumerable<MessageChunk>`)
+- [x] T070 [P] [US1] Implement `ChatView.axaml` in `src/AgentDesktop.Desktop/Views/ChatView.axaml`
+- [x] T071 [P] [US1] Implement `ConversationListViewModel` and `ConversationListView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
+- [x] T072 [US1] Wire `Program.cs` to register `ChatService`, `SqliteChatRepository`, `HttpSubscriptionGate`, `SecretStoreFactory`, `IClock`
 - [x] T073 [US1] Implement `Api/Endpoints/SubscriptionEndpoints.cs` — `POST /v1/subscription/validate` returning subscription status (depends on T072 only conceptually; lives in `Api`)
-- [ ] T074 [US1] End-to-end smoke test using `FakeRuntimeManager` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/SignInAndChatTests.cs` (sign in → send message → assert chunks render → restart simulation → assert history persisted)
+- [x] T074 [US1] End-to-end smoke test using `FakeRuntimeManager` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/SignInAndChatTests.cs` (sign in → send message → assert chunks render → restart simulation → assert history persisted)
 - [x] T124 [US1] Application test `ChatService` honours `ISubscriptionGate` in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceSubscriptionTests.cs` — covers FR-023: when `ISubscriptionGate` reports `Expired` / `Revoked` / out-of-grace `Unknown`, `ChatService.SendMessageAsync` MUST refuse, surface a `System` message naming the recovery path, leave existing conversations readable via `GetConversationAsync` / `ListConversationsAsync`, and emit no runtime call. Re-enable on transition back to `Active`
 
 **Checkpoint**: US1 fully functional. SC-001 (≤5 min onboarding),
@@ -180,18 +180,18 @@ deleted exactly once + audit entry recorded.
 
 - [x] T075 [P] [US3] Contract test `IPolicyEngine` in `tests/AgentDesktop.Contracts.Tests/PolicyEngineContractTests.cs` covering each baseline `DangerousActionKind`, `Safe` skips prompt, module override `Safe→Dangerous`, decline → no execution + audit entry, single-use Confirmed, prompts serialised, unknown `Kind` → `Dangerous`
 - [x] T076 [P] [US3] Branch-coverage test for `DefaultPolicyEngine` in `tests/AgentDesktop.Application.Tests/Policies/DefaultPolicyEngineCoverageTests.cs` (constitution gate: 100% branch coverage on the engine)
-- [ ] T077 [P] [US3] Headless a11y test for `ConfirmationDialog` in `tests/AgentDesktop.Desktop.Tests/Views/ConfirmationDialogTests.cs` (keyboard-only confirm/decline, target text reads correctly to a screen-reader stub, focus trapped while open)
+- [x] T077 [P] [US3] Headless a11y test for `ConfirmationDialog` in `tests/AgentDesktop.Desktop.Tests/Views/ConfirmationDialogTests.cs` (keyboard-only confirm/decline, target text reads correctly to a screen-reader stub, focus trapped while open)
 
 ### Implementation for User Story 3
 
 - [x] T078 [P] [US3] Implement baseline classification table in `src/AgentDesktop.Application/Policies/BaselineClassificationTable.cs` (enumerates `DangerousActionKind`)
 - [x] T079 [US3] Implement `DefaultPolicyEngine : IPolicyEngine` in `src/AgentDesktop.Application/Policies/DefaultPolicyEngine.cs` (combines baseline + module-declared `ModulePolicy`, queues prompts via `IConfirmationPrompt`, writes `PolicyDecision` through `IAuditLog`)
 - [x] T080 [P] [US3] Implement `SqliteAuditLog : IAuditLog` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteAuditLog.cs` (append-only `audit_events` and `policy_decisions` tables)
-- [ ] T081 [P] [US3] Implement `ConfirmationDialog.axaml` in `src/AgentDesktop.Desktop/Views/ConfirmationDialog.axaml` (single shared component reused for every dangerous action)
-- [ ] T082 [P] [US3] Implement `AvaloniaConfirmationPrompt : IConfirmationPrompt` in `src/AgentDesktop.Desktop/Adapters/AvaloniaConfirmationPrompt.cs` (serialises requests on a single `SemaphoreSlim`)
-- [ ] T083 [US3] Wire `DefaultPolicyEngine` into `ChatService` skill-invocation path so all agent-initiated actions evaluate through the engine before the runtime executes them
-- [ ] T084 [US3] Update `ChatService` to surface a `System` message on `Declined`/`Skipped` outcomes (visible in chat surface, traceable via `PolicyDecisionId`)
-- [ ] T085 [US3] Register `DefaultPolicyEngine`, `SqliteAuditLog`, `AvaloniaConfirmationPrompt` in `Program.cs`
+- [x] T081 [P] [US3] Implement `ConfirmationDialog.axaml` in `src/AgentDesktop.Desktop/Views/ConfirmationDialog.axaml` (single shared component reused for every dangerous action)
+- [x] T082 [P] [US3] Implement `AvaloniaConfirmationPrompt : IConfirmationPrompt` in `src/AgentDesktop.Desktop/Adapters/AvaloniaConfirmationPrompt.cs` (serialises requests on a single `SemaphoreSlim`)
+- [x] T083 [US3] Wire `DefaultPolicyEngine` into `SkillInvocationService` (per R18 the platform doesn't drive skills from `ChatService`; direct skill invocation is the engine entry point) so all agent-initiated actions evaluate through the engine before the runtime executes them
+- [x] T084 [US3] `SkillInvocationService` surfaces a `System` message naming the `PolicyDecisionId` on `Declined`/`Skipped`/`Expired` outcomes (visible in chat surface, traceable via `PolicyDecisionId`)
+- [x] T085 [US3] Register `DefaultPolicyEngine`, `SqliteAuditLog`, `AvaloniaConfirmationPrompt` in `Program.cs`
 
 **Checkpoint**: US3 fully functional. SC-003 (100% of dangerous
 actions prompted), SC-004 (0 unconfirmed dangerous executions),

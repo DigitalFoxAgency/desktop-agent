@@ -167,7 +167,10 @@ public sealed class ChatService : IChatService
         }
 
         var assembled = bodyBuilder.ToString();
-        if (assembled.Length > 0)
+        // Don't persist empty-or-whitespace agent messages — the runtime may
+        // legitimately end with empty chunks (final marker) and we never want
+        // a blank bubble in history.
+        if (!string.IsNullOrWhiteSpace(assembled))
         {
             var agentMessage = new Message(
                 id: agentMessageId,

@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AgentDesktop.Desktop.ViewModels"
+             xmlns:aut="using:Avalonia.Automation"
+             x:DataType="vm:SignInViewModel"
+             x:Class="AgentDesktop.Desktop.Views.SignInView">
+
+    <Border Padding="32" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
+        <StackPanel Spacing="16">
+            <TextBlock Text="Sign in to AgentDesktop"
+                       FontSize="24"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="Paste the subscription session token issued by your account portal."
+                       TextWrapping="Wrap"
+                       Opacity="0.85" />
+
+            <StackPanel Spacing="6">
+                <TextBlock x:Name="TokenLabel"
+                           Text="Subscription session token" />
+                <TextBox x:Name="TokenInput"
+                         Text="{Binding SessionToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PasswordChar="•"
+                         Watermark="paste token here"
+                         IsEnabled="{Binding !IsBusy}"
+                         aut:AutomationProperties.Name="Subscription session token"
+                         aut:AutomationProperties.LabeledBy="{Binding #TokenLabel}" />
+            </StackPanel>
+
+            <Button x:Name="SubmitButton"
+                    Content="Sign in"
+                    Command="{Binding SubmitCommand}"
+                    HotKey="Enter"
+                    IsDefault="True"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    aut:AutomationProperties.Name="Sign in" />
+
+            <TextBlock x:Name="ErrorText"
+                       Text="{Binding ErrorMessage}"
+                       Foreground="#B00020"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       aut:AutomationProperties.LiveSetting="Polite" />
+
+            <ProgressBar IsIndeterminate="True"
+                         IsVisible="{Binding IsBusy}"
+                         aut:AutomationProperties.Name="Validating subscription" />
+        </StackPanel>
+    </Border>
+</UserControl>

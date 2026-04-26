@@ -119,6 +119,32 @@ public sealed class ChatServiceContractTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task SendMessageAsync_does_not_persist_whitespace_only_agent_reply()
+    {
+        // Runtime emits only whitespace + final-empty marker — must not persist a blank bubble.
+        _runtime.ProgramChat((_, _) => WhitespaceOnly());
+
+        var service = NewService();
+        var convo = await service.StartConversationAsync(CancellationToken.None);
+
+        await foreach (var _ in service.SendMessageAsync(convo.Id, "hi", CancellationToken.None))
+        {
+            // drain
+        }
+
+        _repository.Calls.Should().NotContain(c => c.Contains(",Agent", StringComparison.Ordinal));
+
+        static async IAsyncEnumerable<MessageChunk> WhitespaceOnly()
+        {
+            await Task.Yield();
+            var id = MessageId.New();
+            yield return new MessageChunk(id, "   ", IsFinal: false);
+            yield return new MessageChunk(id, "\n", IsFinal: false);
+            yield return new MessageChunk(id, string.Empty, IsFinal: true);
+        }
+    }
+
+    [Fact]
     public async Task SendMessageAsync_history_is_readable_after_subscription_revoked()
     {
         // Establish history while active.
