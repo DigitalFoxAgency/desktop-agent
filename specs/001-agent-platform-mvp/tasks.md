@@ -82,25 +82,25 @@ is complete and `dotnet test` is green.
 
 ### Application abstractions (interface-first)
 
-- [ ] T030 [P] Define `IClock` in `src/AgentDesktop.Application/Abstractions/IClock.cs`
-- [ ] T031 [P] Define `IConfirmationPrompt` in `src/AgentDesktop.Application/Abstractions/IConfirmationPrompt.cs`
-- [ ] T032 [P] Define `IAuditLog` in `src/AgentDesktop.Application/Abstractions/IAuditLog.cs`
-- [ ] T033 [P] Define `IModuleSource` and `IScenarioSource` in `src/AgentDesktop.Application/Abstractions/`
-- [ ] T034 [P] Define `IChatRepository` in `src/AgentDesktop.Application/Chat/IChatRepository.cs`
-- [ ] T035 [P] Define `IChatService` + `MessageChunk` in `src/AgentDesktop.Application/Chat/IChatService.cs` (matches `contracts/IChatService.md`)
-- [ ] T036 [P] Define `IModuleRegistry` in `src/AgentDesktop.Application/Modules/IModuleRegistry.cs` (matches `contracts/IModuleRegistry.md`)
-- [ ] T037 [P] Define `IScenarioRegistry` + `IScenarioRunner` + `ScenarioEvent` in `src/AgentDesktop.Application/Scenarios/IScenarioRunner.cs`
-- [ ] T038 [P] Define `IPolicyEngine` in `src/AgentDesktop.Application/Policies/IPolicyEngine.cs`
-- [ ] T039 [P] Define `IRuntimeManager` + `SkillInvocationResult` in `src/AgentDesktop.Application/Runtime/IRuntimeManager.cs`
-- [ ] T040 [P] Define `ISecretStore` in `src/AgentDesktop.Application/Secrets/ISecretStore.cs`
-- [ ] T041 [P] Define `ISubscriptionGate` in `src/AgentDesktop.Application/Subscription/ISubscriptionGate.cs`
-- [ ] T042 [P] Define `ISessionLog` in `src/AgentDesktop.Application/Modules/ISessionLog.cs` (reads `[<skill>: verified]` records — required by launchpad scenario gating)
+- [x] T030 [P] Define `IClock` in `src/AgentDesktop.Application/Abstractions/IClock.cs`
+- [x] T031 [P] Define `IConfirmationPrompt` in `src/AgentDesktop.Application/Abstractions/IConfirmationPrompt.cs`
+- [x] T032 [P] Define `IAuditLog` in `src/AgentDesktop.Application/Abstractions/IAuditLog.cs`
+- [x] T033 [P] Define `IModuleSource` and `IScenarioSource` in `src/AgentDesktop.Application/Abstractions/`
+- [x] T034 [P] Define `IChatRepository` in `src/AgentDesktop.Application/Chat/IChatRepository.cs`
+- [x] T035 [P] Define `IChatService` + `MessageChunk` in `src/AgentDesktop.Application/Chat/IChatService.cs` (matches `contracts/IChatService.md`)
+- [x] T036 [P] Define `IModuleRegistry` in `src/AgentDesktop.Application/Modules/IModuleRegistry.cs` (matches `contracts/IModuleRegistry.md`)
+- [x] T037 [P] Define `IScenarioRegistry` + `IScenarioRunner` + `ScenarioEvent` in `src/AgentDesktop.Application/Scenarios/IScenarioRunner.cs`
+- [x] T038 [P] Define `IPolicyEngine` in `src/AgentDesktop.Application/Policies/IPolicyEngine.cs`
+- [x] T039 [P] Define `IRuntimeManager` + `SkillInvocationResult` in `src/AgentDesktop.Application/Runtime/IRuntimeManager.cs`
+- [x] T040 [P] Define `ISecretStore` in `src/AgentDesktop.Application/Secrets/ISecretStore.cs`
+- [x] T041 [P] Define `ISubscriptionGate` in `src/AgentDesktop.Application/Subscription/ISubscriptionGate.cs`
+- [x] T042 [P] Define `ISessionLog` in `src/AgentDesktop.Application/Modules/ISessionLog.cs` (reads `[<skill>: verified]` records — required by launchpad scenario gating)
 
 ### Contract-test scaffolding
 
-- [ ] T043 Create contract-test base in `tests/AgentDesktop.Contracts.Tests/ContractFixture.cs` and `RequiresLiveRuntimeAttribute.cs` (xUnit trait), wired so default CI excludes the live trait
-- [ ] T044 [P] Add `tests/AgentDesktop.Contracts.Tests/Fakes/FakeRuntimeManager.cs` — programmable, deterministic, honours full `RuntimeStatus` state machine; can pre-program responses per `(moduleId, skillId)`
-- [ ] T045 [P] Add `tests/AgentDesktop.Contracts.Tests/Fakes/FakeClock.cs`, `FakeAuditLog.cs`, `FakeConfirmationPrompt.cs`, `FakeSecretStore.cs`, `FakeChatRepository.cs`
+- [x] T043 Create contract-test base in `tests/AgentDesktop.Contracts.Tests/ContractFixture.cs` and `RequiresLiveRuntimeAttribute.cs` (xUnit trait), wired so default CI excludes the live trait
+- [x] T044 [P] Add `tests/AgentDesktop.Contracts.Tests/Fakes/FakeRuntimeManager.cs` — programmable, deterministic, honours full `RuntimeStatus` state machine; can pre-program responses per `(moduleId, skillId)`
+- [x] T045 [P] Add `tests/AgentDesktop.Contracts.Tests/Fakes/FakeClock.cs`, `FakeAuditLog.cs`, `FakeConfirmationPrompt.cs`, `FakeSecretStore.cs`, `FakeChatRepository.cs`
 
 ### Infrastructure foundation (no story-specific behaviour yet)
 
@@ -119,7 +119,7 @@ is complete and `dotnet test` is green.
 - [ ] T055 [P] Create design tokens + base styles in `src/AgentDesktop.Desktop/Theme/Tokens.axaml` (color, spacing, typography)
 - [ ] T056 [P] Create localisation infrastructure in `src/AgentDesktop.Desktop/Resources/Strings.resx` and `LocalizationProvider.cs` (English-only at MVP, externalised)
 - [ ] T057 [P] Add UI-thread watchdog (debug-only) in `src/AgentDesktop.Desktop/Diagnostics/UiThreadWatchdog.cs` asserting no >50 ms synchronous work per frame (constitution Principle IV)
-- [ ] T123 [P] Contract test `IRuntimeManager` in `tests/AgentDesktop.Contracts.Tests/RuntimeManagerContractTests.cs` covering the documented state machine (`NotInstalled → Installing → Starting → Ready → Degraded → Stopped`), illegal transitions throw, `InvokeSkillAsync` throws a typed exception naming current status when not `Ready`, `StreamChatAsync` finalises exactly once with `IsFinal=true`, double dispose is a no-op (idempotent). Runs against `FakeRuntimeManager` only at MVP; the same tests are reused against `ProcessRuntimeManager` in Phase 7 behind the `RequiresLiveRuntime` trait
+- [x] T123 [P] Contract test `IRuntimeManager` in `tests/AgentDesktop.Contracts.Tests/RuntimeManagerContractTests.cs` covering the documented state machine (`NotInstalled → Installing → Starting → Ready → Degraded → Stopped`), illegal transitions throw, `InvokeSkillAsync` throws a typed exception naming current status when not `Ready`, `StreamChatAsync` finalises exactly once with `IsFinal=true`, double dispose is a no-op (idempotent). Runs against `FakeRuntimeManager` only at MVP; the same tests are reused against `ProcessRuntimeManager` in Phase 7 behind the `RequiresLiveRuntime` trait
 
 **Checkpoint**: Foundational ready — all interfaces, fakes, and
 schema in place; `dotnet test` green; user-story phases may begin.
