@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "id": "df-client-launchpad",
+  "version": "0.1.0",
+  "name": "Digital Fox Client Launchpad",
+  "description": "End-to-end Digital Fox performance-marketing client onboarding pipeline: from intake and Discovery through site build, integrations, deployment, ad launch, and monthly reporting. Source of truth for skill behaviour lives in the launchpad submodule under source/template/.claude/skills/*/SKILL.md.",
+  "dependencies": [],
+  "skills": [
+    {
+      "id": "init",
+      "name": "Init client project",
+      "description": "Bootstrap an isolated client workspace: folder, git repo, GitHub private repo, base config.ts.",
+      "classification": "dangerous",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/init/SKILL.md",
+      "verificationKey": "init: verified",
+      "inputs": [
+        { "name": "niche", "kind": "string", "required": true, "description": "Client niche / vertical." },
+        { "name": "city", "kind": "string", "required": true, "description": "Client city." },
+        { "name": "clientName", "kind": "string", "required": true, "description": "Client display name." }
+      ],
+      "outputs": [
+        { "name": "clientSlug", "kind": "string", "required": true, "description": "Slug used as the client folder and repo name." },
+        { "name": "clientPath", "kind": "path", "required": true, "description": "Absolute path to the new client folder." }
+      ]
+    },
+    {
+      "id": "pre-research",
+      "name": "Pre-research",
+      "description": "Auto-collect site and market data before the Discovery call.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/pre-research/SKILL.md",
+      "verificationKey": "pre-research: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "keywords",
+      "name": "Keywords (optional)",
+      "description": "Enrich pre-research with a Google Keyword Planner export. Optional in ORDER.md.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/keywords/SKILL.md",
+      "verificationKey": "keywords: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true },
+        { "name": "kwpExport", "kind": "path", "required": false, "description": "Path to the Google Keyword Planner CSV export." }
+      ]
+    },
+    {
+      "id": "brief",
+      "name": "Discovery brief",
+      "description": "Convert the Discovery call into discovery_brief.md + client-brief.md and seed config.ts.",
+      "classification": "dangerous",
+      "kind": "human",
+      "sourcePath": "source/template/.claude/skills/brief/SKILL.md",
+      "verificationKey": "brief: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "Deep research (P01–P12)",
+      "description": "Perplexity Deep Research run producing 02-research/results/.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/research/SKILL.md",
+      "verificationKey": "research: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "semantics",
+      "name": "Semantics + ad copy + budget forecast",
+      "description": "Build the keyword/ad-copy/budget plan that drives site architecture downstream.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/semantics/SKILL.md",
+      "verificationKey": "semantics: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "strategy",
+      "name": "Strategy",
+      "description": "Positioning, ICP, SWOT, funnel.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/strategy/SKILL.md",
+      "verificationKey": "strategy: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "strategy-pdf",
+      "name": "Strategy PDF",
+      "description": "Render the strategy as a client-facing PDF.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/strategy-pdf/SKILL.md",
+      "verificationKey": "strategy-pdf: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ],
+      "outputs": [
+        { "name": "pdfPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "offer",
+      "name": "Offer",
+      "description": "Irresistible offer: value proposition + risk reversal.",
+      "classification": "safe",
+      "kind": "human",
+      "sourcePath": "source/template/.claude/skills/offer/SKILL.md",
+      "verificationKey": "offer: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "architecture",
+      "name": "Site architecture",
+      "description": "Page map (H1 / meta / CTA) derived from semantics.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/architecture/SKILL.md",
+      "verificationKey": "architecture: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "design",
+      "name": "Design system",
+      "description": "Stitch brief, design tokens, base components.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/design/SKILL.md",
+      "verificationKey": "design: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "site",
+      "name": "Build Astro site",
+      "description": "Assemble the Astro 5 + Tailwind v4 site under 07-site/.",
+      "classification": "dangerous",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/site/SKILL.md",
+      "verificationKey": "site: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "integrations",
+      "name": "Integrations",
+      "description": "Resend, Telegram, SendPulse, GTM, GA4, Pixel, Consent Mode v2, Drive.",
+      "classification": "dangerous",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/integrations/SKILL.md",
+      "verificationKey": "integrations: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "seo",
+      "name": "SEO audit",
+      "description": "meta · canonical · JSON-LD · sitemap · performance.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/seo/SKILL.md",
+      "verificationKey": "seo: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "deploy",
+      "name": "Deploy to Cloudflare Pages",
+      "description": "Cloudflare Pages project: domain, SSL, production build.",
+      "classification": "dangerous",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/deploy/SKILL.md",
+      "verificationKey": "deploy: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ],
+      "outputs": [
+        { "name": "siteUrl", "kind": "url", "required": true }
+      ]
+    },
+    {
+      "id": "ads",
+      "name": "Launch ads",
+      "description": "Configure and launch Google Ads / Meta Ads campaigns.",
+      "classification": "dangerous",
+      "kind": "human",
+      "sourcePath": "source/template/.claude/skills/ads/SKILL.md",
+      "verificationKey": "ads: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    },
+    {
+      "id": "reporting",
+      "name": "Monthly reporting",
+      "description": "Optimisation pass and monthly client report.",
+      "classification": "safe",
+      "kind": "automated",
+      "sourcePath": "source/template/.claude/skills/reporting/SKILL.md",
+      "verificationKey": "reporting: verified",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true }
+      ]
+    }
+  ],
+  "mcpServers": [],
+  "prompts": [],
+  "policies": [
+    { "skillId": "brief", "classification": "dangerous", "reason": "Discovery call is human-led per launchpad constitution §14; agent must not auto-fill it." },
+    { "skillId": "offer", "classification": "safe", "reason": "Drafting only; final offer requires human approval per §15." },
+    { "skillId": "ads", "classification": "dangerous", "reason": "Spends client money; requires explicit human authorisation per §12 and §14 (GUI dashboard work)." }
+  ]
+}

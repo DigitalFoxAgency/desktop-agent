@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentdesktop.local/schemas/scenario.schema.json",
+  "title": "Scenario Definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "version", "name", "description", "steps"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+
+    "inputs": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["string", "integer", "number", "boolean", "path", "url", "json"]
+          },
+          "required": { "type": "boolean", "default": true },
+          "description": { "type": "string" }
+        }
+      }
+    },
+
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["module", "skill"],
+        "properties": {
+          "module": { "type": "string" },
+          "skill": { "type": "string" },
+          "description": { "type": "string" },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string", "pattern": "^\\$input\\.[A-Za-z_][A-Za-z0-9_]*$" },
+                { "type": "string", "pattern": "^\\$step\\[\\d+\\]\\.outputs\\.[A-Za-z_][A-Za-z0-9_]*$" },
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" }
+              ]
+            },
+            "default": {}
+          }
+        }
+      }
+    }
+  }
+}

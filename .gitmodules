@@ -1,0 +1,4 @@
+[submodule "modules/df-client-launchpad/source"]
+	path = modules/df-client-launchpad/source
+	url = https://github.com/DigitalFoxAgency/df-client-launchpad.git
+	branch = refactor

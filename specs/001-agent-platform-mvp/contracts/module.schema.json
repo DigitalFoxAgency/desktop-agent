@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentdesktop.local/schemas/module.schema.json",
+  "title": "Module Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "version", "name", "description"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "minLength": 2,
+      "maxLength": 80
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version"],
+        "properties": {
+          "id": { "type": "string" },
+          "version": { "type": "string" }
+        }
+      },
+      "default": []
+    },
+
+    "skills": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "description", "classification"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "classification": { "type": "string", "enum": ["safe", "dangerous"] },
+          "kind": { "type": "string", "enum": ["automated", "human"], "default": "automated" },
+          "sourcePath": { "type": "string", "description": "Relative path within the module root to the authoritative skill contract (e.g. SKILL.md)." },
+          "verificationKey": { "type": "string", "description": "Token expected in SESSION-LOG.md (e.g. 'init: verified') before downstream scenario steps may start." },
+          "inputs": { "$ref": "#/$defs/parameterArray" },
+          "outputs": { "$ref": "#/$defs/parameterArray" }
+        }
+      }
+    },
+
+    "mcpServers": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "command"],
+        "properties": {
+          "name": { "type": "string" },
+          "command": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "env": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "default": {}
+          }
+        }
+      }
+    },
+
+    "prompts": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "body"],
+        "properties": {
+          "name": { "type": "string" },
+          "body": { "type": "string" }
+        }
+      }
+    },
+
+    "policies": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skillId", "classification"],
+        "properties": {
+          "skillId": { "type": "string" },
+          "classification": { "type": "string", "enum": ["safe", "dangerous"] },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "parameterArray": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["string", "integer", "number", "boolean", "path", "url", "json"]
+          },
+          "required": { "type": "boolean", "default": false },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}
