@@ -37,25 +37,25 @@ required before any module skill or scenario can execute safely.
 
 **Purpose**: Solution scaffolding, tooling, and CI baseline.
 
-- [ ] T001 Create `AgentDesktop.sln` at repo root referencing all projects below
-- [ ] T002 [P] Create `src/AgentDesktop.Domain/AgentDesktop.Domain.csproj` (net9.0, nullable enable, no project references)
-- [ ] T003 [P] Create `src/AgentDesktop.Application/AgentDesktop.Application.csproj` (references Domain only)
-- [ ] T004 [P] Create `src/AgentDesktop.Infrastructure/AgentDesktop.Infrastructure.csproj` (references Application + Domain)
-- [ ] T005 [P] Create `src/AgentDesktop.Desktop/AgentDesktop.Desktop.csproj` (Avalonia 11.x, references Application; references Infrastructure only from `Program.cs` composition root)
-- [ ] T006 [P] Create `src/AgentDesktop.Api/AgentDesktop.Api.csproj` (ASP.NET Core Minimal APIs, references Domain)
-- [ ] T007 [P] Create `tests/AgentDesktop.Domain.Tests/AgentDesktop.Domain.Tests.csproj` (xUnit + FluentAssertions)
-- [ ] T008 [P] Create `tests/AgentDesktop.Application.Tests/AgentDesktop.Application.Tests.csproj`
-- [ ] T009 [P] Create `tests/AgentDesktop.Infrastructure.Tests/AgentDesktop.Infrastructure.Tests.csproj`
-- [ ] T010 [P] Create `tests/AgentDesktop.Desktop.Tests/AgentDesktop.Desktop.Tests.csproj` (Avalonia.Headless + Verify)
-- [ ] T011 [P] Create `tests/AgentDesktop.Contracts.Tests/AgentDesktop.Contracts.Tests.csproj` (cross-project contract suite)
-- [ ] T012 [P] Create `tests/AgentDesktop.Bench/AgentDesktop.Bench.csproj` (BenchmarkDotNet)
-- [ ] T013 [P] Add `Directory.Build.props` at repo root (`<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`, `<Nullable>enable</Nullable>`, `<LangVersion>12</LangVersion>`, `<EnableNETAnalyzers>true</EnableNETAnalyzers>`)
-- [ ] T014 [P] Add `.editorconfig` at repo root with .NET formatting rules + analyzer severity overrides aligned with constitution Principle I
-- [ ] T015 [P] Add `Directory.Packages.props` (CPM) pinning Avalonia, Microsoft.Data.Sqlite, Dapper, NJsonSchema, YamlDotNet, ModelContextProtocol, CommunityToolkit.Mvvm, xUnit, FluentAssertions, NSubstitute, Verify, BenchmarkDotNet
-- [ ] T016 [P] Add `.github/workflows/ci.yml` matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`): restore → build (`-warnaserror`) → test → coverage upload
-- [ ] T017 [P] Add `.github/workflows/bench-smoke.yml` (PR-only) running `tests/AgentDesktop.Bench` smoke filter
-- [ ] T018 [P] Add `.github/dependabot.yml` for nuget + github-actions ecosystems
-- [ ] T019 [P] Add `LICENSE` and skeleton `README.md` (point at `specs/001-agent-platform-mvp/quickstart.md` for build instructions)
+- [x] T001 Create `AgentDesktop.sln` at repo root referencing all projects below
+- [x] T002 [P] Create `src/AgentDesktop.Domain/AgentDesktop.Domain.csproj` (net9.0, nullable enable, no project references)
+- [x] T003 [P] Create `src/AgentDesktop.Application/AgentDesktop.Application.csproj` (references Domain only)
+- [x] T004 [P] Create `src/AgentDesktop.Infrastructure/AgentDesktop.Infrastructure.csproj` (references Application + Domain)
+- [x] T005 [P] Create `src/AgentDesktop.Desktop/AgentDesktop.Desktop.csproj` (Avalonia 11.x, references Application; references Infrastructure only from `Program.cs` composition root)
+- [x] T006 [P] Create `src/AgentDesktop.Api/AgentDesktop.Api.csproj` (ASP.NET Core Minimal APIs, references Domain)
+- [x] T007 [P] Create `tests/AgentDesktop.Domain.Tests/AgentDesktop.Domain.Tests.csproj` (xUnit + FluentAssertions)
+- [x] T008 [P] Create `tests/AgentDesktop.Application.Tests/AgentDesktop.Application.Tests.csproj`
+- [x] T009 [P] Create `tests/AgentDesktop.Infrastructure.Tests/AgentDesktop.Infrastructure.Tests.csproj`
+- [x] T010 [P] Create `tests/AgentDesktop.Desktop.Tests/AgentDesktop.Desktop.Tests.csproj` (Avalonia.Headless + Verify)
+- [x] T011 [P] Create `tests/AgentDesktop.Contracts.Tests/AgentDesktop.Contracts.Tests.csproj` (cross-project contract suite)
+- [x] T012 [P] Create `tests/AgentDesktop.Bench/AgentDesktop.Bench.csproj` (BenchmarkDotNet)
+- [x] T013 [P] Add `Directory.Build.props` at repo root (`<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`, `<Nullable>enable</Nullable>`, `<LangVersion>12</LangVersion>`, `<EnableNETAnalyzers>true</EnableNETAnalyzers>`)
+- [x] T014 [P] Add `.editorconfig` at repo root with .NET formatting rules + analyzer severity overrides aligned with constitution Principle I
+- [x] T015 [P] Add `Directory.Packages.props` (CPM) pinning Avalonia, Microsoft.Data.Sqlite, Dapper, NJsonSchema, YamlDotNet, ModelContextProtocol, CommunityToolkit.Mvvm, xUnit, FluentAssertions, NSubstitute, Verify, BenchmarkDotNet
+- [x] T016 [P] Add `.github/workflows/ci.yml` matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`): restore → build (`-warnaserror`) → test → coverage upload
+- [x] T017 [P] Add `.github/workflows/bench-smoke.yml` (PR-only) running `tests/AgentDesktop.Bench` smoke filter
+- [x] T018 [P] Add `.github/dependabot.yml` for nuget + github-actions ecosystems
+- [x] T019 [P] Add `LICENSE` and skeleton `README.md` (point at `specs/001-agent-platform-mvp/quickstart.md` for build instructions)
 
 ---
 

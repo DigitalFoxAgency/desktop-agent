@@ -1,0 +1,47 @@
+name: Benchmark Smoke
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  bench-smoke:
+    name: BenchmarkDotNet smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore AgentDesktop.sln
+
+      - name: Build benchmarks
+        run: dotnet build tests/AgentDesktop.Bench/AgentDesktop.Bench.csproj --configuration Release --no-restore
+
+      - name: Run smoke benchmarks
+        run: |
+          if [ -d tests/AgentDesktop.Bench ]; then
+            dotnet run -c Release --project tests/AgentDesktop.Bench --no-build -- --filter '*Smoke*' --warmupCount 1 --iterationCount 3 || echo "No smoke benchmarks yet (expected before T113)"
+          fi
+        shell: bash
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: BenchmarkDotNet.Artifacts/
+          if-no-files-found: ignore

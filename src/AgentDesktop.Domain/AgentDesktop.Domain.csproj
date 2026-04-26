@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>AgentDesktop.Domain</RootNamespace>
+  </PropertyGroup>
+</Project>

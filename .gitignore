@@ -1,2 +1,127 @@
-.claude/settings.local.json
+# OS
 .DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Editors / IDEs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.template
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.swp
+
+# Claude / Spec Kit local
+.claude/settings.local.json
+
+# .NET build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+[Dd]ebug/
+[Rr]elease/
+[Dd]ebugPublic/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# .NET project artifacts
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.binlog
+*.tlog
+*.cache
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp_proj
+*_wpftmp.csproj
+*.tmp
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Avalonia / Xaml
+*.axaml.g.cs
+*.xaml.g.cs
+
+# Test results / coverage
+[Tt]est[Rr]esult*/
+TestResults/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+.coverlet/
+.codecov/
+BenchmarkDotNet.Artifacts/
+
+# Rider
+.idea/
+*.sln.iml
+
+# JetBrains rider
+**/.idea/
+
+# Mac
+*.DS_Store
+
+# SQLite local databases (developer-local only; CI uses temp files)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Local secrets scratchpad
+*.local.json
+secrets.json
+
+# Specify ephemeral
+.specify/feature.json.bak
