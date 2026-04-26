@@ -140,14 +140,14 @@ reopen → conversation present in history.
 
 - [x] T058 [P] [US1] Contract test `IChatService` in `tests/AgentDesktop.Contracts.Tests/ChatServiceContractTests.cs`: persists user message before runtime call, exactly one `IsFinal=true` chunk, cancellation leaves consistent state, `Degraded` runtime emits `System` message + final chunk
 - [x] T059 [P] [US1] Integration test `SqliteChatRepository` round-trip in `tests/AgentDesktop.Infrastructure.Tests/Persistence/SqliteChatRepositoryTests.cs` (real file-backed temp DB)
-- [ ] T060 [P] [US1] Integration test `HttpSubscriptionGate` against a `WebApplicationFactory<Program>` of `AgentDesktop.Api` in `tests/AgentDesktop.Infrastructure.Tests/Subscription/HttpSubscriptionGateTests.cs`
+- [x] T060 [P] [US1] Integration test `HttpSubscriptionGate` against a `WebApplicationFactory<Program>` of `AgentDesktop.Api` in `tests/AgentDesktop.Infrastructure.Tests/Subscription/HttpSubscriptionGateTests.cs`
 - [ ] T061 [P] [US1] Headless UI test `SignInView` keyboard-only flow in `tests/AgentDesktop.Desktop.Tests/Views/SignInViewTests.cs` (a11y assertion: focus order, label association, contrast)
 
 ### Implementation for User Story 1
 
 - [x] T062 [P] [US1] Implement `SqliteChatRepository : IChatRepository` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteChatRepository.cs` (Dapper, append-only messages, transaction per `SendMessageAsync` finalisation)
-- [ ] T063 [P] [US1] Implement `SubscriptionGate` validation cache + grace-window logic in `src/AgentDesktop.Application/Subscription/SubscriptionGate.cs` (uses `ISubscriptionGate` adapter)
-- [ ] T064 [P] [US1] Implement `HttpSubscriptionGate` in `src/AgentDesktop.Infrastructure/Subscription/HttpSubscriptionGate.cs` (HttpClient + token storage via `ISecretStore`)
+- [x] T063 [P] [US1] Implement `SubscriptionGate` validation cache + grace-window logic in `src/AgentDesktop.Application/Subscription/SubscriptionGate.cs` (uses `ISubscriptionGate` adapter)
+- [x] T064 [P] [US1] Implement `HttpSubscriptionGate` in `src/AgentDesktop.Infrastructure/Subscription/HttpSubscriptionGate.cs` (HttpClient + token storage via `ISecretStore`)
 - [x] T065 [US1] Implement `ChatService : IChatService` in `src/AgentDesktop.Application/Chat/ChatService.cs` — orchestrates `IChatRepository`, `IRuntimeManager.StreamChatAsync`, `ISubscriptionGate`, surfacing `System` messages on runtime degradation (depends on T062, T063, T065's chunk type from foundational T035)
 - [ ] T066 [US1] Application test for `ChatService` ordering and degradation paths in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceTests.cs` (uses `FakeRuntimeManager`, `FakeChatRepository`)
 - [ ] T067 [P] [US1] Implement `SignInViewModel` in `src/AgentDesktop.Desktop/ViewModels/SignInViewModel.cs` (CommunityToolkit.Mvvm `[ObservableProperty]`/`[RelayCommand]`)
@@ -156,9 +156,9 @@ reopen → conversation present in history.
 - [ ] T070 [P] [US1] Implement `ChatView.axaml` in `src/AgentDesktop.Desktop/Views/ChatView.axaml`
 - [ ] T071 [P] [US1] Implement `ConversationListViewModel` and `ConversationListView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
 - [ ] T072 [US1] Wire `Program.cs` to register `ChatService`, `SqliteChatRepository`, `HttpSubscriptionGate`, `SecretStoreFactory`, `IClock`
-- [ ] T073 [US1] Implement `Api/Endpoints/SubscriptionEndpoints.cs` — `POST /v1/subscription/validate` returning subscription status (depends on T072 only conceptually; lives in `Api`)
+- [x] T073 [US1] Implement `Api/Endpoints/SubscriptionEndpoints.cs` — `POST /v1/subscription/validate` returning subscription status (depends on T072 only conceptually; lives in `Api`)
 - [ ] T074 [US1] End-to-end smoke test using `FakeRuntimeManager` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/SignInAndChatTests.cs` (sign in → send message → assert chunks render → restart simulation → assert history persisted)
-- [ ] T124 [US1] Application test `ChatService` honours `ISubscriptionGate` in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceSubscriptionTests.cs` — covers FR-023: when `ISubscriptionGate` reports `Expired` / `Revoked` / out-of-grace `Unknown`, `ChatService.SendMessageAsync` MUST refuse, surface a `System` message naming the recovery path, leave existing conversations readable via `GetConversationAsync` / `ListConversationsAsync`, and emit no runtime call. Re-enable on transition back to `Active`
+- [x] T124 [US1] Application test `ChatService` honours `ISubscriptionGate` in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceSubscriptionTests.cs` — covers FR-023: when `ISubscriptionGate` reports `Expired` / `Revoked` / out-of-grace `Unknown`, `ChatService.SendMessageAsync` MUST refuse, surface a `System` message naming the recovery path, leave existing conversations readable via `GetConversationAsync` / `ListConversationsAsync`, and emit no runtime call. Re-enable on transition back to `Active`
 
 **Checkpoint**: US1 fully functional. SC-001 (≤5 min onboarding),
 SC-002 (≤2 s first chunk), SC-006 (≤2 s history restore) measurable.
@@ -281,7 +281,7 @@ declared operations → pick `monthly-report` → supply `clientPath`
 
 ### Implementation for User Story 4
 
-- [ ] T106 [P] [US4] Implement `SkillInvocationService` in `src/AgentDesktop.Application/Modules/SkillInvocationService.cs` (validates inputs, evaluates via `IPolicyEngine`, dispatches via `IRuntimeManager.InvokeSkillAsync`, persists output as a `Message` with `OriginatingSkill` set). For advanced direct skill invocation only — operations use `DelegationRunner` from Phase 5.
+- [x] T106 [P] [US4] Implement `SkillInvocationService` in `src/AgentDesktop.Application/Modules/SkillInvocationService.cs` (validates inputs, evaluates via `IPolicyEngine`, dispatches via `IRuntimeManager.InvokeSkillAsync`, persists output as a `Message` with `OriginatingSkill` set). For advanced direct skill invocation only — operations use `DelegationRunner` from Phase 5.
 - ~~T107 [P] [US4] ModuleCatalogViewModel + View~~ — already created in Phase 5 (T099). Phase 6 extends the view with an "advanced" pane exposing internal skills.
 - [ ] T108 [P] [US4] Implement `SkillRunViewModel` and `SkillRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — input form generated from `SkillParameter[]`, refuses to run until required fields are filled. Visible only in the advanced pane of the module catalogue. Includes per-view a11y assertion (every input has an associated label, error messages announced to screen reader, submit button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/SkillRunViewTests.cs` (constitution Principle III)
 - [ ] T109 [US4] Register `SkillInvocationService` in `Program.cs`
