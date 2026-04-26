@@ -69,16 +69,16 @@ is complete and `dotnet test` is green.
 
 ### Domain layer (no external deps)
 
-- [ ] T020 [P] Create strongly-typed ids in `src/AgentDesktop.Domain/Identifiers.cs` — `ConversationId`, `MessageId`, `ModuleId`, `SkillId`, `ScenarioId`, `PolicyDecisionId`, `AccountId`, `SecretKey` (record structs)
-- [ ] T021 [P] Create `src/AgentDesktop.Domain/SemanticVersion.cs` and `SemanticVersionRange.cs` (parser + comparison)
-- [ ] T022 [P] Create domain enums in `src/AgentDesktop.Domain/Enums.cs` — `MessageAuthor`, `ActionClassification`, `RuntimeStatus`, `RuntimeKind`, `ModuleLoadStatus`, `ScenarioLoadStatus`, `ModuleSource`, `SkillKind`, `DangerousActionKind`, `PolicyOutcome`, `PolicyExecutionResult`, `SubscriptionStatus`
-- [ ] T023 [P] Create chat domain types in `src/AgentDesktop.Domain/Chat/` — `Conversation.cs`, `Message.cs`, `ScenarioStepRef.cs`, `SkillRef.cs`
-- [ ] T024 [P] Create module domain types in `src/AgentDesktop.Domain/Modules/` — `Module.cs`, `Skill.cs` (with `Kind`, `SourcePath`, `VerificationKey`), `SkillParameter.cs`, `ModuleDependency.cs`, `McpServerDescriptor.cs`, `PromptTemplate.cs`, `ModulePolicy.cs`
-- [ ] T025 [P] Create scenario domain types in `src/AgentDesktop.Domain/Scenarios/` — `Scenario.cs`, `ScenarioStep.cs`, `ScenarioBinding.cs`, `ScenarioStatus.cs`
-- [ ] T026 [P] Create policy domain types in `src/AgentDesktop.Domain/Policies/` — `DangerousAction.cs`, `PolicyDecision.cs`, `PolicyOrigin.cs`
-- [ ] T027 [P] Create identity domain types in `src/AgentDesktop.Domain/Identity/UserAccount.cs`
-- [ ] T028 [P] Domain tests: invariants for Conversation/Message in `tests/AgentDesktop.Domain.Tests/Chat/ConversationTests.cs` (LastActivityAt monotonic, Message.Index unique within Conversation, OriginatingScenarioStep XOR OriginatingSkill)
-- [ ] T029 [P] Domain tests: SemanticVersion + range in `tests/AgentDesktop.Domain.Tests/SemanticVersionTests.cs`
+- [x] T020 [P] Create strongly-typed ids in `src/AgentDesktop.Domain/Identifiers.cs` — `ConversationId`, `MessageId`, `ModuleId`, `SkillId`, `ScenarioId`, `PolicyDecisionId`, `AccountId`, `SecretKey` (record structs)
+- [x] T021 [P] Create `src/AgentDesktop.Domain/SemanticVersion.cs` and `SemanticVersionRange.cs` (parser + comparison)
+- [x] T022 [P] Create domain enums in `src/AgentDesktop.Domain/Enums.cs` — `MessageAuthor`, `ActionClassification`, `RuntimeStatus`, `RuntimeKind`, `ModuleLoadStatus`, `ScenarioLoadStatus`, `ModuleSource`, `SkillKind`, `DangerousActionKind`, `PolicyOutcome`, `PolicyExecutionResult`, `SubscriptionStatus`
+- [x] T023 [P] Create chat domain types in `src/AgentDesktop.Domain/Chat/` — `Conversation.cs`, `Message.cs`, `ScenarioStepRef.cs`, `SkillRef.cs`
+- [x] T024 [P] Create module domain types in `src/AgentDesktop.Domain/Modules/` — `Module.cs`, `Skill.cs` (with `Kind`, `SourcePath`, `VerificationKey`), `SkillParameter.cs`, `ModuleDependency.cs`, `McpServerDescriptor.cs`, `PromptTemplate.cs`, `ModulePolicy.cs`
+- [x] T025 [P] Create scenario domain types in `src/AgentDesktop.Domain/Scenarios/` — `Scenario.cs`, `ScenarioStep.cs`, `ScenarioBinding.cs`, `ScenarioStatus.cs`
+- [x] T026 [P] Create policy domain types in `src/AgentDesktop.Domain/Policies/` — `DangerousAction.cs`, `PolicyDecision.cs`, `PolicyOrigin.cs`
+- [x] T027 [P] Create identity domain types in `src/AgentDesktop.Domain/Identity/UserAccount.cs`
+- [x] T028 [P] Domain tests: invariants for Conversation/Message in `tests/AgentDesktop.Domain.Tests/Chat/ConversationTests.cs` (LastActivityAt monotonic, Message.Index unique within Conversation, OriginatingScenarioStep XOR OriginatingSkill)
+- [x] T029 [P] Domain tests: SemanticVersion + range in `tests/AgentDesktop.Domain.Tests/SemanticVersionTests.cs`
 
 ### Application abstractions (interface-first)
 

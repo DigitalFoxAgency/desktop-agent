@@ -84,6 +84,13 @@ dotnet_diagnostic.CA1031.severity = suggestion
 dotnet_diagnostic.CA1303.severity = none   # Localize literals
 dotnet_diagnostic.CA1848.severity = suggestion  # Use LoggerMessage delegates
 dotnet_diagnostic.CA2007.severity = none   # ConfigureAwait — desktop app
+dotnet_diagnostic.CA1716.severity = none   # Reserved language keywords ("Module" is intentional)
+dotnet_diagnostic.CA1720.severity = none   # Identifier contains type name (enum members like String/Integer are intentional)
+dotnet_diagnostic.CA1815.severity = suggestion  # Override Equals on value types — we're fine for record structs
+dotnet_diagnostic.CA1034.severity = suggestion  # Nested types — intentional for discriminated unions
+dotnet_diagnostic.CA2227.severity = none   # Read-only collections — we use IReadOnlyList everywhere
+dotnet_diagnostic.CA1819.severity = suggestion  # Properties shouldn't return arrays
+dotnet_diagnostic.CA1054.severity = suggestion  # URI prop should be Uri
 
 [tests/**/*.cs]
 dotnet_diagnostic.CA1707.severity = none
