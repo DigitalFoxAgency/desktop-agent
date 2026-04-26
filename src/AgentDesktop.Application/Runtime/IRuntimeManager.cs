@@ -62,11 +62,18 @@ public interface IRuntimeManager : IAsyncDisposable
         CancellationToken ct);
 
     /// <summary>
-    /// Stream agent reply chunks for a chat turn that does NOT
-    /// require module delegation (intent classification, casual
-    /// chat). For module work use <see cref="DelegateAsync"/>.
+    /// Run one turn of the **top-level agent** (router-only).
+    /// Given the user's latest message and the conversation
+    /// history, the agent decides whether to (a) reply in plain
+    /// text or (b) call its <c>delegate_operation</c> tool to
+    /// hand off to a module. The agent's tool surface is fixed
+    /// at <c>list_modules</c> + <c>delegate_operation</c>; it
+    /// never asks the user clarifying questions itself — that
+    /// is the module's job during delegation (see
+    /// <see cref="IDelegationCallbacks.AskUserAsync"/>).
+    /// Throws if Status is not Ready.
     /// </summary>
-    IAsyncEnumerable<MessageChunk> StreamChatAsync(
+    IAsyncEnumerable<MessageChunk> RunChatTurnAsync(
         ConversationId conversationId,
         IReadOnlyList<Message> history,
         string userMessage,
@@ -109,4 +116,14 @@ public interface IDelegationCallbacks
     /// user marks the step done; the module then resumes.
     /// </summary>
     Task RequestHumanHandoffAsync(string stepName, string instructions, CancellationToken ct);
+
+    /// <summary>
+    /// Module → platform: ask the user a free-text question and
+    /// await their reply. Surfaces the question as an agent
+    /// message in the chat; the platform routes the user's next
+    /// chat input to this task as the answer. The module pauses
+    /// until the answer arrives. No timeout at MVP; cancellation
+    /// flows through the supplied <see cref="CancellationToken"/>.
+    /// </summary>
+    Task<string> AskUserAsync(string question, CancellationToken ct);
 }

@@ -47,11 +47,14 @@ public interface IRuntimeManager : IAsyncDisposable
         CancellationToken ct);
 
     /// <summary>
-    /// Stream agent reply chunks for a chat turn that does NOT
-    /// require module delegation (e.g. routing-style intent
-    /// classification, casual chat).
+    /// Run one turn of the **top-level agent** (router-only).
+    /// The runtime executes the OpenClaw-driven agent loop here
+    /// with the documented tool surface (`list_modules` +
+    /// `delegate_operation`). The agent decides whether to reply
+    /// in plain text or delegate to a module; it does not ask
+    /// clarifying questions itself.
     /// </summary>
-    IAsyncEnumerable<MessageChunk> StreamChatAsync(
+    IAsyncEnumerable<MessageChunk> RunChatTurnAsync(
         ConversationId conversationId,
         IReadOnlyList<Message> history,
         string userMessage,
@@ -84,6 +87,15 @@ public interface IDelegationCallbacks
     /// done; the module then resumes.
     /// </summary>
     Task RequestHumanHandoffAsync(string stepName, string instructions, CancellationToken ct);
+
+    /// <summary>
+    /// Module → platform: ask the user a free-text question and
+    /// await their reply. The platform surfaces the question as
+    /// an agent message in chat and routes the user's next input
+    /// to this task as the answer (see "Chat routing during a
+    /// pending question" below). No timeout at MVP.
+    /// </summary>
+    Task<string> AskUserAsync(string question, CancellationToken ct);
 }
 ```
 
@@ -141,12 +153,35 @@ public interface IDelegationCallbacks
 13. Same Ready-only and sandbox-isolation constraints as
     `DelegateAsync`.
 
-### `StreamChatAsync`
+### `RunChatTurnAsync` (top-level agent loop)
 
 14. Yields chunks in order. Finalises with exactly one
     `IsFinal=true` chunk.
-15. Does NOT delegate to a module. Used for routing-style chat,
-    intent classification surfaces, or casual replies.
+15. Runs the **top-level agent** with the fixed tool surface:
+    `list_modules` + `delegate_operation`. The agent's prompt is
+    platform-controlled. Modules do NOT register additional
+    tools at MVP.
+16. The agent does not have an `ask_user` tool: clarification is
+    the module's job (`AskUserAsync` callback) during a
+    delegation.
+17. When the agent calls `delegate_operation`, the platform
+    services the call by invoking
+    `IRuntimeManager.DelegateAsync` internally. Progress events
+    from the module flow into the same chat stream.
+
+### Chat routing during a pending question
+
+18. While a delegation has an unresolved
+    `IDelegationCallbacks.AskUserAsync` task, the platform
+    routes the next chat message from the user as the answer to
+    that task — `RunChatTurnAsync` is NOT invoked.
+19. Once the answer resolves the task, the next chat message
+    starts a new chat turn (re-enters `RunChatTurnAsync`) only
+    if no further `AskUserAsync` is outstanding.
+20. Cancellation mid-delegation is a UI affordance (Cancel
+    button on the operation panel). Typing "cancel" in chat
+    during a pending question is interpreted as the answer
+    "cancel", not as cancellation.
 
 ## Required tests (contract)
 

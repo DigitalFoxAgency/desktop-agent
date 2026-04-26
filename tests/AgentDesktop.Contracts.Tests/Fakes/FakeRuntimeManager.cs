@@ -157,7 +157,7 @@ public sealed class FakeRuntimeManager : IRuntimeManager
             Error: null));
     }
 
-    public IAsyncEnumerable<MessageChunk> StreamChatAsync(
+    public IAsyncEnumerable<MessageChunk> RunChatTurnAsync(
         ConversationId conversationId,
         IReadOnlyList<Message> history,
         string userMessage,
@@ -170,7 +170,7 @@ public sealed class FakeRuntimeManager : IRuntimeManager
         if (Status != RuntimeStatus.Ready)
         {
             throw new InvalidOperationException(
-                $"Cannot stream chat while runtime status is {Status}; must be Ready.");
+                $"Cannot run chat turn while runtime status is {Status}; must be Ready.");
         }
 
         return _chatResponder(history, userMessage);

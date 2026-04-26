@@ -90,6 +90,14 @@ sees the final result rendered in the chat.
    failure is reported back to the platform, **Then** the chat
    shows the module-supplied error and offers retry or cancel; no
    further work occurs without explicit user action.
+6. **Given** a running delegation has a pending question from
+   the module (the module called `AskUserAsync`), **When** the
+   user types in chat, **Then** the message is routed to the
+   module as the answer to its pending question; no new chat
+   turn begins until the delegation has no pending question.
+   Cancellation mid-delegation is a UI affordance (Cancel button
+   on the operation panel), not something the user types in
+   chat.
 
 ---
 
@@ -224,7 +232,14 @@ corresponding delegation begins.
 - **FR-009**: An operation declaration in a module manifest MUST
   declare its id, name, description, and inputs. The execution of
   the operation is the responsibility of the owning module; the
-  platform stores no platform-side step definitions.
+  platform stores no platform-side step definitions. **Operation
+  inputs are advisory**: the platform passes whatever it has to
+  the module (possibly empty / partial), and the module is
+  responsible for asking the user (via callback) for any missing
+  inputs interactively. The catalogue UI MAY collect inputs
+  upfront when the user explicitly picks an operation, but the
+  module MUST still tolerate incomplete inputs from a chat-driven
+  delegation.
 - **FR-010**: The platform MUST surface the module's progress events
   (text updates, intermediate results, errors) in the chat surface
   in real time, MUST broker any dangerous-action confirmations the
@@ -302,6 +317,14 @@ corresponding delegation begins.
   introspection or advanced direct invocation, but the platform
   does NOT orchestrate skills — it delegates whole operations and
   the module sequences its own skills internally.
+- **Top-level agent**: The single OpenClaw-driven agent that owns
+  the chat surface. On every user message it runs a chat turn,
+  decides whether to reply in plain text or delegate to a module,
+  and (when delegating) becomes the bridge between the user and
+  the module. Router-only: its tool surface is `list_modules` and
+  `delegate_operation`. It does NOT ask the user clarifying
+  questions itself — clarification is the module's job during
+  delegation (via `AskUserAsync`).
 - **Operation**: A high-level user-facing entry point declared by a
   module's manifest. Has an id (unique within its owning module),
   name, description, and declared inputs. The platform delegates

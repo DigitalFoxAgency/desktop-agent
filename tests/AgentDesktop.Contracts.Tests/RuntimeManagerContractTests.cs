@@ -186,13 +186,13 @@ public sealed class RuntimeManagerContractTests
     }
 
     [Fact]
-    public async Task StreamChatAsync_finalises_exactly_once()
+    public async Task RunChatTurnAsync_finalises_exactly_once()
     {
         await using var rt = new FakeRuntimeManager();
         await rt.StartAsync(CancellationToken.None);
 
         var chunks = new List<MessageChunk>();
-        await foreach (var chunk in rt.StreamChatAsync(
+        await foreach (var chunk in rt.RunChatTurnAsync(
             ConversationId.New(),
             Array.Empty<Message>(),
             "hello",
@@ -204,6 +204,40 @@ public sealed class RuntimeManagerContractTests
         chunks.Should().NotBeEmpty();
         chunks.Count(c => c.IsFinal).Should().Be(1);
         chunks.Last().IsFinal.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DelegateAsync_propagates_AskUserAsync_round_trip()
+    {
+        await using var rt = new FakeRuntimeManager();
+        rt.ProgramOperation(Launchpad, "onboard-client", async ctx =>
+        {
+            var nameAnswer = await ctx.Callbacks.AskUserAsync("What's the client name?", ctx.Cancellation);
+            var cityAnswer = await ctx.Callbacks.AskUserAsync("What city?", ctx.Cancellation);
+            return new DelegationResult(true, new Dictionary<string, object?>
+            {
+                ["clientName"] = nameAnswer,
+                ["city"] = cityAnswer,
+            });
+        });
+        await rt.StartAsync(CancellationToken.None);
+
+        var callbacks = new RecordingCallbacks
+        {
+            QueuedAnswers = new Queue<string>(new[] { "Acme Corp", "Prague" }),
+        };
+
+        var result = await rt.DelegateAsync(
+            Launchpad,
+            "onboard-client",
+            new Dictionary<string, object?>(),
+            ConversationId.New(),
+            callbacks,
+            CancellationToken.None);
+
+        callbacks.AskedQuestions.Should().ContainInOrder("What's the client name?", "What city?");
+        result.Outputs["clientName"].Should().Be("Acme Corp");
+        result.Outputs["city"].Should().Be("Prague");
     }
 
     [Fact]
@@ -231,6 +265,8 @@ public sealed class RuntimeManagerContractTests
         public List<string> Progress { get; } = new();
         public List<DangerousAction> ConfirmationRequests { get; } = new();
         public List<(string StepName, string Instructions)> Handoffs { get; } = new();
+        public List<string> AskedQuestions { get; } = new();
+        public Queue<string> QueuedAnswers { get; init; } = new();
         public bool ConfirmAnswer { get; set; }
 
         public Task EmitProgressAsync(string text, CancellationToken ct)
@@ -249,6 +285,18 @@ public sealed class RuntimeManagerContractTests
         {
             Handoffs.Add((stepName, instructions));
             return Task.CompletedTask;
+        }
+
+        public Task<string> AskUserAsync(string question, CancellationToken ct)
+        {
+            AskedQuestions.Add(question);
+            if (!QueuedAnswers.TryDequeue(out var answer))
+            {
+                throw new InvalidOperationException(
+                    $"RecordingCallbacks has no queued answer for question: '{question}'");
+            }
+
+            return Task.FromResult(answer);
         }
     }
 

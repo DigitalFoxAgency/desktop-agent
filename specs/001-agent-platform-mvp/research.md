@@ -235,6 +235,124 @@ platform's role is chat-as-bridge plus safety brokerage
   whole operations**, not a step-level scenario. The composition
   unit stays "operation", never "skill".
 
+### Extensibility surface (what fits and what strains the model)
+
+The model is intentionally thin. The platform's job is
+chat-bridge + safety + audit + identity + runtime lifecycle.
+Almost any future extension you can think of either **wraps a
+delegation** or **extends a policy / contract** — both are free.
+What is forbidden is **piercing into a module's internals**.
+
+**The invariant (one rule, non-negotiable)**:
+
+> The unit of composition is **operation**. The platform never
+> reaches inside an operation.
+
+**Extensions that fit the model** (layer above or around
+delegation; module is untouched):
+
+- Pre-delegation input validation (schema, business rules,
+  security checks) inside `DelegationRunner` before
+  `IRuntimeManager.DelegateAsync`.
+- Output validation against the operation's declared output
+  schema after `DelegateAsync` returns.
+- Retries / timeouts / rate limits as middleware around
+  `DelegationRunner`.
+- Caching expensive operations when inputs match a recent run
+  (opt-in via operation metadata).
+- Audit / metrics / structured logging — already part of the
+  platform, extends naturally.
+- Stricter or user-customised policy rules (e.g. "always
+  confirm spends >€10") via `IPolicyEngine`; the policy engine
+  still gates the existing `IDelegationCallbacks.RequestConfirmationAsync`
+  channel.
+- Cross-cutting approvals ("this delegation needs manager
+  sign-off") as a new gate around `DelegationRunner` or a
+  policy-engine extension.
+- Routing fine-tuning (top-level agent prompt nudges,
+  tool-priority hints) — the agent's prompt and tool surface
+  are platform-controlled.
+- Concurrent-delegation limits, budget metering, "dry run"
+  modes — all live in `DelegationRunner` or as opt-in
+  operation parameters.
+
+**Extensions that strain the model** (signals that the
+operation contract is too coarse, NOT that the model is
+wrong):
+
+1. *Wanting to inspect a module's internal step output.*
+   Example: "Validate the strategy.md the launchpad generates
+   between strategy and site." If you need this, the
+   launchpad's `onboard-client` is too coarse — it should
+   split into `generate-strategy` (returns `strategyMd`) and
+   `build-from-strategy` (takes `strategyMd`). Two operations,
+   validation between them, model intact.
+2. *Wanting to skip / reorder / replace a module's internal
+   step.* Example: "Run the launchpad's onboarding but skip
+   pre-research." The fix is in the **module**: either accept
+   a `skipPreResearch` input, or expose a separate operation
+   that omits it. The platform never decides which internal
+   step runs.
+
+**Rule of thumb**: when you feel the urge to reach inside a
+module, the move is to make the module **expose a
+finer-grained operation**, not to **bypass the module**.
+
+**One genuine future extension that fits** — multi-operation
+playbooks (see "When to revisit" above). Playbooks compose
+operations the same way operations compose internal steps:
+each level only knows about the next level down.
+
+```
+playbook → operation → (module-internal: skill → step → … )
+   ↑           ↑                      ↑
+ user-       platform                module
+ facing      delegates                owns
+                                      this
+```
+
+The platform delegates operations, never skills. A playbook
+engine would compose operations, never their internals. The
+invariant scales without modification.
+
+### Top-level agent — router only (refinement)
+
+The chat surface is owned by a single OpenClaw-driven agent
+(the **top-level agent**). On every user message it runs a
+chat turn. Its tool surface is intentionally minimal:
+
+- `list_modules()` — return the loaded modules + their
+  declared operations (with names, descriptions, declared
+  inputs).
+- `delegate_operation(moduleId, operationId, inputs)` — start
+  a delegation. **Inputs may be partial.** The module accepts
+  what it gets and asks the user via callback for whatever it
+  still needs.
+
+The top-level agent has **no `ask_user` tool**. Clarification
+is the **module's** job during delegation, not the agent's
+before delegation. If a user's message is ambiguous, the
+agent commits to a delegation (its best guess) and lets the
+module ask interactively.
+
+If the user's message doesn't match any operation, the agent
+just replies in plain text — no tool call, no delegation.
+
+**Chat routing during an active delegation**: while a
+delegation has a pending `IDelegationCallbacks.AskUserAsync`,
+the next user chat message is routed **as the answer to that
+question**, not as a new chat turn. New chat turns only start
+when no delegation question is pending. Cancellation
+mid-delegation is a UI affordance (Cancel button on the
+operation panel), not something the user types in chat.
+
+**Per-module customisation** is intentionally absent at MVP:
+the top-level agent learns about modules entirely through the
+registry. Module-supplied prompt fragments and additional
+agent-level tools beyond `delegate_operation` are deferred —
+revisit if/when concrete modules cannot be reasonably routed
+without them.
+
 ---
 
 ## R6. Local agent runtime abstraction — `IRuntimeManager`
