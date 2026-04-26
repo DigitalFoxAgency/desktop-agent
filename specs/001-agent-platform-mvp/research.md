@@ -255,6 +255,142 @@ baseline (Principle IV).
 
 ---
 
+## R16. Architectural style — Layered for MVP, modular monolith deferred
+
+**Decision**: For the MVP, keep the simple **layered Clean
+Architecture** (`Domain → Application → Infrastructure / Desktop /
+Api`) already in `plan.md`. **Defer** migration to a modular
+monolith with bounded-context subsystems until at least one of the
+"when to revisit" triggers below fires.
+
+**Rationale for deferring**:
+- At MVP scale (~5 source projects, ~80 LoC per repository, single
+  developer, single bundled module) the layered structure already
+  enforces the boundaries that matter most: UI cannot reach the
+  database, infrastructure cannot leak into the domain, and every
+  collaborator is behind an interface.
+- Modular-monolith boundaries pay off when (a) multiple developers
+  are touching the same code daily, (b) cross-context coupling
+  starts appearing in PRs, or (c) a subsystem needs to be
+  extracted to a separate process. None of these are MVP problems.
+- The migration cost from layered → modular at our scale is
+  estimated at **1–2 days of mechanical refactor** — not a
+  one-way door. Adding it upfront costs ~1 day of setup *plus*
+  ongoing discipline overhead (analyzer, banned-symbols files,
+  `internal` reviews) that buys nothing until the codebase gets
+  larger.
+- The interface-driven plan (`IChatService`, `IModuleRegistry`,
+  `IPolicyEngine`, `IRuntimeManager`, `ISecretStore`,
+  `ISubscriptionGate`) keeps the migration cheap by ensuring no
+  code outside Infrastructure ever touches a concrete adapter.
+
+**Terminology decision (kept regardless of migration timing)**:
+- The product concept is **"Module"** (`df-client-launchpad`).
+- If/when a modular-monolith migration happens, the architectural
+  unit will be called a **"Subsystem"** to avoid colliding with
+  the product term. This decision is recorded now so the
+  vocabulary is settled before any future migration starts.
+
+**Alternatives considered**:
+- **Modular monolith (lite — one project per subsystem with
+  `Contracts/` boundary)** — fully designed in
+  `docs/architecture/subsystems-future.md`, including subsystem
+  cuts, reference matrix, analyzer setup, and migration playbook.
+  Rejected for MVP timing only; this is the documented target for
+  post-MVP if/when warranted.
+- **Modular monolith (heavy — four projects per subsystem)** —
+  same rejection plus a project-explosion penalty (~28 projects)
+  that buys no enforcement we don't already get from `internal`
+  + analyzer in the lite layout.
+- **Vertical-slice / feature-folder monolith without explicit
+  bounded contexts** — boundary creep is famously hard to
+  recover from; rejected as a non-target even for MVP.
+
+**When to revisit (triggers for migrating to modular monolith)**:
+- A second developer joins and friction appears at the
+  application-layer seams (typical signal: PRs touching the same
+  files repeatedly).
+- A subsystem grows to the point where reviewers cannot hold its
+  internals in their head, *and* its scope is clearly separable
+  from the rest.
+- A subsystem needs out-of-process extraction (e.g. `Runtime`
+  for hard isolation) — see the migration playbook in
+  `docs/architecture/subsystems-future.md`.
+- Modules start declaring policies that materially diverge across
+  the platform's bounded contexts (a sign that "Modules" and
+  "Policies" want stronger isolation).
+
+**Implications for current plan**:
+- `plan.md` Project Structure stays at the original five-project
+  layered tree.
+- `plan.md` Scale/Scope stays at "~5 source projects + ~6 test
+  projects".
+- `tasks.md` does not change — Phase 1/Phase 2 task paths target
+  the layered tree.
+- `docs/architecture/subsystems-future.md` is committed alongside
+  this entry as ready-to-execute homework for the future
+  migration. It is **not** a description of current state.
+
+---
+
+## R15. Persistence library reaffirmed — Dapper (over EF Core 9)
+
+**Decision**: Keep Dapper as the data-access library for SQLite,
+with hand-written numbered SQL migrations (`0001_init.sql`, …)
+applied by a tiny custom runner. EF Core 9 was reconsidered and
+explicitly rejected for the MVP.
+
+**Rationale**:
+- The MVP schema is four small append-only tables with six total
+  query shapes across the whole codebase (insert conversation,
+  insert message, list conversations, get messages by conversation,
+  insert policy decision, insert audit event). No updates, no
+  deletes, no relationships beyond a single foreign key.
+- The team is unfamiliar with both Dapper and EF Core 9. Given
+  unfamiliarity is symmetrical, the smaller surface area wins:
+  Dapper's API is ~3 concepts (`IDbConnection`, `QueryAsync<T>`,
+  parameter binding); EF Core 9's productive subset is ~10
+  (DbContext lifetime, change tracking, `AsNoTracking`, migrations,
+  compiled models, factory pattern, owned types, query splitting,
+  transactions, `IDbContextFactory`).
+- Failure modes are more visible with Dapper: the SQL written is
+  the SQL that runs. EF Core's productivity comes with hidden
+  performance footguns (N+1, lazy loading on the UI thread,
+  change-tracking memory bloat) that a beginner can ship without
+  noticing.
+- Dapper aligns the team's learning with a transferable skill
+  (SQL) rather than a framework (EF Core). This pays off across
+  any future stack.
+- The `IChatRepository` and `IAuditLog` interfaces in
+  `AgentDesktop.Application` are the escape hatch: if the schema
+  ever grows joins or reporting needs that benefit from LINQ, EF
+  Core can replace Dapper inside `AgentDesktop.Infrastructure`
+  without touching any other project.
+
+**Alternatives considered (this re-evaluation)**:
+- **EF Core 9** — more familiar to the broader .NET community and
+  productive once learned, but materially more to learn correctly
+  for a 4-table append-only schema. Cold-start budget is met
+  either way; the deciding factor was learning surface area, not
+  performance.
+- **Raw `Microsoft.Data.Sqlite` (no ORM at all)** — viable, but
+  ~50% more boilerplate per repository than Dapper for no
+  meaningful gain. Reserved as a fallback for any future hot path
+  that profiles slow.
+
+**When to revisit**:
+- A query needs more than one join.
+- LINQ-over-the-database becomes preferable to SQL-as-strings.
+- An admin/reporting surface is added that benefits from EF's
+  query composition.
+
+**Implications captured elsewhere**: none — `plan.md` and
+`tasks.md` already specify Dapper. This entry exists so the
+decision (and the explicit reconsideration) is in the historical
+record and the team does not re-litigate it without context.
+
+---
+
 ## R12. MVP module distribution — single module via Git submodule
 
 **Decision**: The MVP bundles exactly one module,

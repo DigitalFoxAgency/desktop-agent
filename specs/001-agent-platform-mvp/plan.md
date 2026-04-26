@@ -71,6 +71,19 @@ per frame.
   submodule), 3 bundled scenarios at MVP.
 - Local SQLite expected to stay below 100 MB for typical use.
 
+**Terminology** (worth pinning even at MVP scale to avoid
+ambiguity in PR review):
+- **Module** — the **product** concept: a versioned package of
+  AI capabilities loaded via `module.json` (e.g.
+  `df-client-launchpad`). User-facing.
+- The MVP uses a layered architecture (no architectural
+  "subsystems" yet); a future modular-monolith migration is
+  documented in `docs/architecture/subsystems-future.md` and
+  recorded as a deferred decision in `research.md` R16. When
+  that migration happens, the architectural unit will be called
+  a **Subsystem** to avoid colliding with the product term
+  "Module".
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
@@ -189,6 +202,13 @@ composition root in `Desktop` is the *only* place that knows about
 SQLite or runtime details). This layout maps 1:1 to the architecture
 constraints in the feature description and to the constitution's
 code-quality + testability principles.
+
+A migration to a **modular monolith** (one project per bounded
+context with `Contracts/` boundaries enforced by analyzer) was
+considered and **deferred to post-MVP** (research.md R16). The
+fully-designed migration target is captured in
+`docs/architecture/subsystems-future.md` for the day it becomes
+warranted.
 
 ## MVP Module: `df-client-launchpad`
 
