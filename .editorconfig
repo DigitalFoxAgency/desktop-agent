@@ -77,6 +77,20 @@ dotnet_diagnostic.CS8603.severity = error
 dotnet_diagnostic.CS8604.severity = error
 dotnet_diagnostic.CS8618.severity = error
 
+# IDE style rules — promote to errors so cleanup discipline is enforced
+dotnet_diagnostic.IDE0005.severity = error   # Unused using directive
+dotnet_diagnostic.IDE0011.severity = error   # Add braces
+dotnet_diagnostic.IDE0040.severity = error   # Add accessibility modifier
+dotnet_diagnostic.IDE0051.severity = error   # Unused private member
+dotnet_diagnostic.IDE0052.severity = error   # Unused private field/property assignment
+dotnet_diagnostic.IDE0059.severity = error   # Unnecessary value assignment
+dotnet_diagnostic.IDE0060.severity = error   # Unused parameter (with exclusions below)
+dotnet_diagnostic.IDE0270.severity = error   # Null check can be simplified
+dotnet_diagnostic.IDE0290.severity = silent  # Use primary constructor — stylistic; off
+dotnet_diagnostic.IDE0028.severity = suggestion # Use collection initialiser — stylistic
+dotnet_diagnostic.IDE0301.severity = suggestion # Use collection expression for empty — stylistic
+dotnet_diagnostic.IDE0044.severity = error   # Make field readonly
+
 # Disable some analyzers that are too noisy for an in-progress codebase
 dotnet_diagnostic.CA1014.severity = none   # CLSCompliant
 dotnet_diagnostic.CA1707.severity = none   # Underscores in identifiers (test names use them)
@@ -98,3 +112,4 @@ dotnet_diagnostic.CA1062.severity = none
 dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1822.severity = none
 dotnet_diagnostic.CA1861.severity = none  # Constant-array argument readability nit; tests benefit from inline arrays
+dotnet_diagnostic.IDE0060.severity = none  # Tests intentionally have unused parameters (theory data, etc)

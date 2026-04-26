@@ -1,5 +1,3 @@
-using AgentDesktop.Domain;
-
 namespace AgentDesktop.Domain.Tests;
 
 public sealed class SemanticVersionTests

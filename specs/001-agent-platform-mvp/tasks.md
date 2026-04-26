@@ -104,14 +104,14 @@ is complete and `dotnet test` is green.
 
 ### Infrastructure foundation (no story-specific behaviour yet)
 
-- [ ] T046 Create migrations folder + initial schema script in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/Migrations/0001_init.sql` (tables: `conversations`, `messages`, `policy_decisions`, `audit_events`)
-- [ ] T047 [P] Implement `SqliteConnectionFactory` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteConnectionFactory.cs` (resolves per-user data dir, applies migrations on first open)
-- [ ] T048 [P] Implement `EncryptedFileSecretStore` (cross-platform fallback, AES-GCM) in `src/AgentDesktop.Infrastructure/Secrets/EncryptedFileSecretStore.cs`
-- [ ] T049 [P] Implement `WindowsDpapiSecretStore` in `src/AgentDesktop.Infrastructure/Secrets/WindowsDpapiSecretStore.cs`
-- [ ] T050 [P] Implement `MacKeychainSecretStore` in `src/AgentDesktop.Infrastructure/Secrets/MacKeychainSecretStore.cs`
-- [ ] T051 [P] Implement `LinuxSecretStore` (libsecret P/Invoke, fallback to `EncryptedFileSecretStore` if unavailable) in `src/AgentDesktop.Infrastructure/Secrets/LinuxSecretStore.cs`
-- [ ] T052 Implement `SecretStoreFactory` in `src/AgentDesktop.Infrastructure/Secrets/SecretStoreFactory.cs` selecting the platform adapter at runtime
-- [ ] T053 [P] Contract test for `ISecretStore` against the live platform adapter and the encrypted-file fallback in `tests/AgentDesktop.Contracts.Tests/SecretStoreContractTests.cs`
+- [x] T046 Create migrations folder + initial schema script in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/Migrations/0001_init.sql` (tables: `conversations`, `messages`, `policy_decisions`, `audit_events`)
+- [x] T047 [P] Implement `SqliteConnectionFactory` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteConnectionFactory.cs` (resolves per-user data dir, applies migrations on first open)
+- [x] T048 [P] Implement `EncryptedFileSecretStore` (cross-platform fallback, AES-GCM) in `src/AgentDesktop.Infrastructure/Secrets/EncryptedFileSecretStore.cs`
+- [x] T049 [P] Implement `WindowsDpapiSecretStore` in `src/AgentDesktop.Infrastructure/Secrets/WindowsDpapiSecretStore.cs`
+- [x] T050 [P] Implement `MacKeychainSecretStore` in `src/AgentDesktop.Infrastructure/Secrets/MacKeychainSecretStore.cs`
+- [x] T051 [P] Implement `LinuxSecretStore` (libsecret P/Invoke, fallback to `EncryptedFileSecretStore` if unavailable) in `src/AgentDesktop.Infrastructure/Secrets/LinuxSecretStore.cs`
+- [x] T052 Implement `SecretStoreFactory` in `src/AgentDesktop.Infrastructure/Secrets/SecretStoreFactory.cs` selecting the platform adapter at runtime
+- [x] T053 [P] Contract test for `ISecretStore` against the live platform adapter and the encrypted-file fallback in `tests/AgentDesktop.Contracts.Tests/SecretStoreContractTests.cs`
 
 ### Desktop composition root
 
@@ -138,17 +138,17 @@ reopen → conversation present in history.
 
 ### Tests for User Story 1
 
-- [ ] T058 [P] [US1] Contract test `IChatService` in `tests/AgentDesktop.Contracts.Tests/ChatServiceContractTests.cs`: persists user message before runtime call, exactly one `IsFinal=true` chunk, cancellation leaves consistent state, `Degraded` runtime emits `System` message + final chunk
-- [ ] T059 [P] [US1] Integration test `SqliteChatRepository` round-trip in `tests/AgentDesktop.Infrastructure.Tests/Persistence/SqliteChatRepositoryTests.cs` (real file-backed temp DB)
+- [x] T058 [P] [US1] Contract test `IChatService` in `tests/AgentDesktop.Contracts.Tests/ChatServiceContractTests.cs`: persists user message before runtime call, exactly one `IsFinal=true` chunk, cancellation leaves consistent state, `Degraded` runtime emits `System` message + final chunk
+- [x] T059 [P] [US1] Integration test `SqliteChatRepository` round-trip in `tests/AgentDesktop.Infrastructure.Tests/Persistence/SqliteChatRepositoryTests.cs` (real file-backed temp DB)
 - [ ] T060 [P] [US1] Integration test `HttpSubscriptionGate` against a `WebApplicationFactory<Program>` of `AgentDesktop.Api` in `tests/AgentDesktop.Infrastructure.Tests/Subscription/HttpSubscriptionGateTests.cs`
 - [ ] T061 [P] [US1] Headless UI test `SignInView` keyboard-only flow in `tests/AgentDesktop.Desktop.Tests/Views/SignInViewTests.cs` (a11y assertion: focus order, label association, contrast)
 
 ### Implementation for User Story 1
 
-- [ ] T062 [P] [US1] Implement `SqliteChatRepository : IChatRepository` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteChatRepository.cs` (Dapper, append-only messages, transaction per `SendMessageAsync` finalisation)
+- [x] T062 [P] [US1] Implement `SqliteChatRepository : IChatRepository` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteChatRepository.cs` (Dapper, append-only messages, transaction per `SendMessageAsync` finalisation)
 - [ ] T063 [P] [US1] Implement `SubscriptionGate` validation cache + grace-window logic in `src/AgentDesktop.Application/Subscription/SubscriptionGate.cs` (uses `ISubscriptionGate` adapter)
 - [ ] T064 [P] [US1] Implement `HttpSubscriptionGate` in `src/AgentDesktop.Infrastructure/Subscription/HttpSubscriptionGate.cs` (HttpClient + token storage via `ISecretStore`)
-- [ ] T065 [US1] Implement `ChatService : IChatService` in `src/AgentDesktop.Application/Chat/ChatService.cs` — orchestrates `IChatRepository`, `IRuntimeManager.StreamChatAsync`, `ISubscriptionGate`, surfacing `System` messages on runtime degradation (depends on T062, T063, T065's chunk type from foundational T035)
+- [x] T065 [US1] Implement `ChatService : IChatService` in `src/AgentDesktop.Application/Chat/ChatService.cs` — orchestrates `IChatRepository`, `IRuntimeManager.StreamChatAsync`, `ISubscriptionGate`, surfacing `System` messages on runtime degradation (depends on T062, T063, T065's chunk type from foundational T035)
 - [ ] T066 [US1] Application test for `ChatService` ordering and degradation paths in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceTests.cs` (uses `FakeRuntimeManager`, `FakeChatRepository`)
 - [ ] T067 [P] [US1] Implement `SignInViewModel` in `src/AgentDesktop.Desktop/ViewModels/SignInViewModel.cs` (CommunityToolkit.Mvvm `[ObservableProperty]`/`[RelayCommand]`)
 - [ ] T068 [P] [US1] Implement `SignInView.axaml` in `src/AgentDesktop.Desktop/Views/SignInView.axaml`

@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
 using AgentDesktop.Desktop.ViewModels;
 using Avalonia.Controls;

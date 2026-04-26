@@ -1,4 +1,3 @@
-using AgentDesktop.Domain;
 using AgentDesktop.Domain.Chat;
 
 namespace AgentDesktop.Domain.Tests.Chat;

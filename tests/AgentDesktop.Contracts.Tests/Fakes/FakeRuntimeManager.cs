@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using AgentDesktop.Application.Abstractions;
 using AgentDesktop.Application.Chat;
 using AgentDesktop.Application.Runtime;
@@ -13,7 +12,7 @@ namespace AgentDesktop.Contracts.Tests.Fakes;
 /// per-(moduleId, operationId) responders for
 /// <see cref="DelegateAsync"/>, per-(moduleId, skillId) responders
 /// for <see cref="InvokeSkillAsync"/>, and a chat streamer for
-/// <see cref="StreamChatAsync"/>.
+/// <see cref="RunChatTurnAsync"/>.
 /// </summary>
 public sealed class FakeRuntimeManager : IRuntimeManager
 {

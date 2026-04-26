@@ -18,4 +18,8 @@
     <ProjectReference Include="..\AgentDesktop.Application\AgentDesktop.Application.csproj" />
     <ProjectReference Include="..\AgentDesktop.Domain\AgentDesktop.Domain.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Persistence\Sqlite\Migrations\*.sql" />
+  </ItemGroup>
 </Project>

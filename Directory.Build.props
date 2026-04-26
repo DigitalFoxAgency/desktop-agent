@@ -17,7 +17,9 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(IsTestProject)' == 'true' OR $(MSBuildProjectName.EndsWith('.Tests')) OR $(MSBuildProjectName.EndsWith('.Bench')) ">
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Keep doc file ON so IDE0005 can analyse, but suppress CS1591 (missing XML comment) since tests don't need docs. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 </Project>
