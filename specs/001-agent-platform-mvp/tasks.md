@@ -178,15 +178,15 @@ deleted exactly once + audit entry recorded.
 
 ### Tests for User Story 3
 
-- [ ] T075 [P] [US3] Contract test `IPolicyEngine` in `tests/AgentDesktop.Contracts.Tests/PolicyEngineContractTests.cs` covering each baseline `DangerousActionKind`, `Safe` skips prompt, module override `Safe→Dangerous`, decline → no execution + audit entry, single-use Confirmed, prompts serialised, unknown `Kind` → `Dangerous`
-- [ ] T076 [P] [US3] Branch-coverage test for `DefaultPolicyEngine` in `tests/AgentDesktop.Application.Tests/Policies/DefaultPolicyEngineCoverageTests.cs` (constitution gate: 100% branch coverage on the engine)
+- [x] T075 [P] [US3] Contract test `IPolicyEngine` in `tests/AgentDesktop.Contracts.Tests/PolicyEngineContractTests.cs` covering each baseline `DangerousActionKind`, `Safe` skips prompt, module override `Safe→Dangerous`, decline → no execution + audit entry, single-use Confirmed, prompts serialised, unknown `Kind` → `Dangerous`
+- [x] T076 [P] [US3] Branch-coverage test for `DefaultPolicyEngine` in `tests/AgentDesktop.Application.Tests/Policies/DefaultPolicyEngineCoverageTests.cs` (constitution gate: 100% branch coverage on the engine)
 - [ ] T077 [P] [US3] Headless a11y test for `ConfirmationDialog` in `tests/AgentDesktop.Desktop.Tests/Views/ConfirmationDialogTests.cs` (keyboard-only confirm/decline, target text reads correctly to a screen-reader stub, focus trapped while open)
 
 ### Implementation for User Story 3
 
-- [ ] T078 [P] [US3] Implement baseline classification table in `src/AgentDesktop.Application/Policies/BaselineClassificationTable.cs` (enumerates `DangerousActionKind`)
-- [ ] T079 [US3] Implement `DefaultPolicyEngine : IPolicyEngine` in `src/AgentDesktop.Application/Policies/DefaultPolicyEngine.cs` (combines baseline + module-declared `ModulePolicy`, queues prompts via `IConfirmationPrompt`, writes `PolicyDecision` through `IAuditLog`)
-- [ ] T080 [P] [US3] Implement `SqliteAuditLog : IAuditLog` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteAuditLog.cs` (append-only `audit_events` and `policy_decisions` tables)
+- [x] T078 [P] [US3] Implement baseline classification table in `src/AgentDesktop.Application/Policies/BaselineClassificationTable.cs` (enumerates `DangerousActionKind`)
+- [x] T079 [US3] Implement `DefaultPolicyEngine : IPolicyEngine` in `src/AgentDesktop.Application/Policies/DefaultPolicyEngine.cs` (combines baseline + module-declared `ModulePolicy`, queues prompts via `IConfirmationPrompt`, writes `PolicyDecision` through `IAuditLog`)
+- [x] T080 [P] [US3] Implement `SqliteAuditLog : IAuditLog` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteAuditLog.cs` (append-only `audit_events` and `policy_decisions` tables)
 - [ ] T081 [P] [US3] Implement `ConfirmationDialog.axaml` in `src/AgentDesktop.Desktop/Views/ConfirmationDialog.axaml` (single shared component reused for every dangerous action)
 - [ ] T082 [P] [US3] Implement `AvaloniaConfirmationPrompt : IConfirmationPrompt` in `src/AgentDesktop.Desktop/Adapters/AvaloniaConfirmationPrompt.cs` (serialises requests on a single `SemaphoreSlim`)
 - [ ] T083 [US3] Wire `DefaultPolicyEngine` into `ChatService` skill-invocation path so all agent-initiated actions evaluate through the engine before the runtime executes them

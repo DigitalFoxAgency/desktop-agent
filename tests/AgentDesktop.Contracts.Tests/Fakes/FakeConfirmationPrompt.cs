@@ -19,6 +19,9 @@ public sealed class FakeConfirmationPrompt : IConfirmationPrompt
 
     public bool MaxConcurrentExceeded { get; private set; }
 
+    /// <summary>If true, the next <see cref="ConfirmAsync"/> call throws <see cref="OperationCanceledException"/>.</summary>
+    public bool CancelOnNextRequest { get; set; }
+
     public void EnqueueResponse(bool confirm) => _responses.Enqueue(confirm);
 
     public async Task<bool> ConfirmAsync(DangerousAction action, CancellationToken ct)
@@ -40,6 +43,12 @@ public sealed class FakeConfirmationPrompt : IConfirmationPrompt
             lock (Asked)
             {
                 Asked.Add(action);
+            }
+
+            if (CancelOnNextRequest)
+            {
+                CancelOnNextRequest = false;
+                throw new OperationCanceledException("Cancellation injected by FakeConfirmationPrompt for the test.");
             }
 
             if (!_responses.TryDequeue(out var response))
