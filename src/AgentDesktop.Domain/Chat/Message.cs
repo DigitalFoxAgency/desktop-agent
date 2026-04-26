@@ -16,7 +16,7 @@ public sealed record Message
         MessageAuthor author,
         string body,
         DateTimeOffset createdAt,
-        ScenarioStepRef? originatingScenarioStep = null,
+        DelegationRef? originatingDelegation = null,
         SkillRef? originatingSkill = null)
     {
         ArgumentNullException.ThrowIfNull(body);
@@ -31,11 +31,11 @@ public sealed record Message
             throw new ArgumentException($"Message body exceeds {MaxBodyBytes} bytes.", nameof(body));
         }
 
-        if (originatingScenarioStep is not null && originatingSkill is not null)
+        if (originatingDelegation is not null && originatingSkill is not null)
         {
             throw new ArgumentException(
-                "A message cannot originate from both a scenario step and a direct skill invocation.",
-                nameof(originatingScenarioStep));
+                "A message cannot originate from both a running delegation and a direct skill invocation.",
+                nameof(originatingDelegation));
         }
 
         Id = id;
@@ -44,7 +44,7 @@ public sealed record Message
         Author = author;
         Body = body;
         CreatedAt = createdAt;
-        OriginatingScenarioStep = originatingScenarioStep;
+        OriginatingDelegation = originatingDelegation;
         OriginatingSkill = originatingSkill;
     }
 
@@ -54,6 +54,6 @@ public sealed record Message
     public MessageAuthor Author { get; }
     public string Body { get; }
     public DateTimeOffset CreatedAt { get; }
-    public ScenarioStepRef? OriginatingScenarioStep { get; }
+    public DelegationRef? OriginatingDelegation { get; }
     public SkillRef? OriginatingSkill { get; }
 }

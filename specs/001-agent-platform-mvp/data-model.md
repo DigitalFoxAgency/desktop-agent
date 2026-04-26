@@ -43,16 +43,17 @@ A single utterance.
 | `Author` | `MessageAuthor` (enum: `User`, `Agent`, `System`) | |
 | `Body` | `string` | Plain text or Markdown; ≤32 KiB. |
 | `CreatedAt` | `DateTimeOffset` | |
-| `OriginatingScenarioStep` | `ScenarioStepRef?` | Set when the message was produced by a scenario step. |
-| `OriginatingSkill` | `SkillRef?` | Set when produced by a direct skill invocation. |
+| `OriginatingDelegation` | `DelegationRef?` | Set when produced by a running module delegation. Carries `(ModuleId, OperationId)`. |
+| `OriginatingSkill` | `SkillRef?` | Set when produced by a direct skill invocation (US4 advanced path). Carries `(ModuleId, SkillId)`. |
 
 **Invariants**:
 - `Index` is unique within `ConversationId`.
 - `Author == System` is reserved for non-conversational artefacts
   such as cancellation notices and runtime-status banners.
-- A message produced by a scenario step has `OriginatingScenarioStep`
-  set; a message produced by direct skill invocation has
-  `OriginatingSkill` set; both fields cannot be set simultaneously.
+- A message produced inside a running delegation has
+  `OriginatingDelegation` set; a message produced by direct skill
+  invocation has `OriginatingSkill` set; both fields cannot be set
+  simultaneously.
 
 ### State transitions
 Conversations have no lifecycle state; messages are append-only. Edits
@@ -74,7 +75,8 @@ Loaded representation of a validated `module.json`.
 | `Description` | `string` | ≤500 chars. |
 | `SchemaVersion` | `int` | The `module.json` schema version that produced this record. |
 | `Dependencies` | `IReadOnlyList<ModuleDependency>` | Resolved, not raw. |
-| `Skills` | `IReadOnlyList<Skill>` | |
+| `Operations` | `IReadOnlyList<Operation>` | Platform-visible entry points the platform may delegate to. See Section 3. |
+| `Skills` | `IReadOnlyList<Skill>` | **Internal** to the module. Surfaced for catalogue introspection (US4 advanced) but the platform does NOT orchestrate skills — it delegates whole operations (R18). |
 | `McpServers` | `IReadOnlyList<McpServerDescriptor>` | |
 | `Prompts` | `IReadOnlyList<PromptTemplate>` | |
 | `Policies` | `IReadOnlyList<ModulePolicy>` | Per-skill policy overrides. |
@@ -140,45 +142,67 @@ Loaded representation of a validated `module.json`.
 
 ---
 
-## 3. Scenarios
+## 3. Operations & Delegations
 
-### Scenario
+> **Architectural note**: There is no platform-side `Scenario`
+> aggregate. The previous design with `scenarios/*.yaml` driven by
+> a platform scenario engine was replaced by **module-owned
+> orchestration** — see research.md R5 / R18. What follows are the
+> platform's view of operations declared by modules and the
+> live-delegation runtime concept.
+
+### Operation
+A platform-visible entry point declared inside a module's
+`module.json` under `operations[]`. Lives in the `Modules` section
+conceptually because operations belong to modules.
+
 | Field | Type | Notes |
 |-------|------|-------|
-| `Id` | `ScenarioId` | |
-| `Version` | `SemanticVersion` | |
-| `Name` | `string` | |
-| `Description` | `string` | |
-| `SchemaVersion` | `int` | |
-| `Inputs` | `IReadOnlyList<SkillParameter>` | Inputs the scenario asks the user for. |
-| `Steps` | `IReadOnlyList<ScenarioStep>` | Ordered. |
-| `LoadStatus` | `ScenarioLoadStatus` (`Loaded`, `Incompatible`) | |
-| `LoadError` | `string?` | |
+| `Id` | `string` | Unique within its owning module. |
+| `Name` | `string` | Display name. ≤80 chars. |
+| `Description` | `string` | ≤500 chars. |
+| `Inputs` | `IReadOnlyList<SkillParameter>` | Declared inputs the platform collects from the user before delegating. |
 
-### ScenarioStep
-| Field | Type | Notes |
-|-------|------|-------|
-| `Index` | `int` | 0-based, ordered. |
-| `ModuleId` | `ModuleId` | |
-| `SkillId` | `SkillId` | |
-| `InputBindings` | `IReadOnlyDictionary<string, ScenarioBinding>` | Maps skill input name → source (scenario input or prior step output). |
-| `Description` | `string` | Human-readable summary of what this step does. |
-
-### ScenarioBinding
-A discriminated union: either a literal value, a reference to a
-scenario input, or a reference to `step[N].outputs.<name>`.
-
-### ScenarioStatus (runtime, not persisted as part of Scenario)
-`NotStarted → Running → AwaitingConfirmation → Cancelling → Completed`,
-with terminal states `Completed`, `Cancelled`, `Failed`.
+`Module.Operations` is an `IReadOnlyList<Operation>` added to the
+`Module` aggregate (see Section 2).
 
 **Invariants**:
-- `Steps[i].InputBindings` may only reference outputs of `Steps[j]`
-  with `j < i`.
-- A scenario whose referenced module/skill is missing or whose
-  `SchemaVersion` is unknown is `Incompatible` and cannot start.
-- Cancellation MUST drive the status to `Cancelling` first; only
-  after the in-flight step settles does it become `Cancelled`.
+- `Operation.Id` is unique within `Module.Operations`.
+- An operation's inputs use the same `SkillParameter` shape as
+  skill parameters (validated as `string` / `integer` / `path` /
+  `url` / `json` etc.).
+
+### Delegation (runtime concept, not persisted)
+The live execution of an operation. Represented in the
+Application layer as the state observable from a running
+`IRuntimeManager.DelegateAsync` call.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `ModuleId` | `ModuleId` | The owning module. |
+| `OperationId` | `string` | The operation being delegated. |
+| `ConversationId` | `ConversationId` | Conversation the delegation belongs to (for chat surfacing). |
+| `Inputs` | `IReadOnlyDictionary<string, object?>` | Snapshot of the inputs the user supplied. |
+| `Status` | `DelegationStatus` enum | `Running → AwaitingConfirmation → AwaitingHumanHandoff → Cancelling → Completed/Cancelled/Failed`. |
+
+The platform never reaches inside the module to drive its
+internal steps. The module emits events back through callbacks
+(see `contracts/IRuntimeManager.md`):
+- `EmitProgressAsync(text)` — chat surface update.
+- `RequestConfirmationAsync(DangerousAction)` — synchronously
+  awaits the platform's policy decision (Confirmed/Declined).
+- `RequestHumanHandoffAsync(stepName, instructions)` —
+  synchronously awaits the user marking the step done.
+
+**Invariants**:
+- A `Confirmed` decision delivered through the callback is
+  single-use; the module re-asks for any subsequent occurrence
+  of the same action class (FR-013).
+- Cancellation MUST drive `Status` to `Cancelling` first; the
+  module's in-flight work finalises before the platform records
+  `Cancelled`.
+- Every delegation produces exactly one terminal status:
+  `Completed`, `Cancelled`, or `Failed`.
 
 ---
 
@@ -197,7 +221,7 @@ per proposed side-effect; it is the unit the user confirms.
 | `Id` | `PolicyDecisionId` | Stable across the prompt → result lifecycle. |
 | `Kind` | `DangerousActionKind` (`DeleteFile`, `GitPush`, `InstallPackage`, `RunShell`, `ModuleDeclared`) | |
 | `Target` | `string` | Human-readable target (path, repo URL, package, command). |
-| `Origin` | `PolicyOrigin` (`Skill`, `ScenarioStep`) + ids | Who proposed it. |
+| `Origin` | `PolicyOrigin` (`FromSkill`, `FromDelegation`) + ids | Who proposed it. `FromDelegation` carries `(ModuleId, OperationId)`; `FromSkill` carries `(ModuleId, SkillId)` (US4 advanced path). |
 | `RequestedAt` | `DateTimeOffset` | |
 
 ### PolicyDecision
@@ -272,19 +296,20 @@ is **not** stored on `UserAccount`. It is held only in
 UserAccount (in-memory, refreshed by ISubscriptionGate)
 
 Conversation 1───* Message
-                    Message *──0..1 ScenarioStepRef
+                    Message *──0..1 DelegationRef
                     Message *──0..1 SkillRef
 
-Module 1───* Skill
+Module 1───* Operation     (platform-visible entry points)
+Module 1───* Skill          (internal; advanced direct invocation only)
 Module 1───* ModulePolicy
 Module 1───* McpServerDescriptor
 Module 1───* PromptTemplate
 Module *───* Module (Dependencies)
 
-Scenario 1───* ScenarioStep ──> (ModuleId, SkillId)
+Delegation (runtime concept) ──> (Module, Operation, Conversation)
 
 PolicyDecision 1───1 DangerousAction
-PolicyDecision *───0..1 ScenarioStepRef / SkillRef (via Origin)
+PolicyDecision *───0..1 DelegationRef / SkillRef (via PolicyOrigin)
 ```
 
 ---
@@ -294,12 +319,13 @@ PolicyDecision *───0..1 ScenarioStepRef / SkillRef (via Origin)
 SQLite tables (column lists abridged):
 
 - `conversations(id, title, created_at, last_activity_at)`
-- `messages(id, conversation_id, idx, author, body, created_at, scenario_step_ref, skill_ref)`
+- `messages(id, conversation_id, idx, author, body, created_at, delegation_module_id, delegation_operation_id, skill_module_id, skill_id)`
 - `policy_decisions(id, kind, target, origin_kind, origin_id, requested_at, outcome, decided_at, execution_result, execution_error)`
 - `audit_events(id, created_at, kind, payload_json)` — append-only log
   used for FR-022.
 
-Modules and scenarios are *not* persisted in SQLite; they are loaded
-from `<userData>/modules/` and `<userData>/scenarios/` on startup
-and on explicit refresh. This keeps the manifests as the single
-source of truth (FR-006, FR-008) and avoids stale-cache bugs.
+Modules are *not* persisted in SQLite; they are loaded from
+`<userData>/modules/` on startup and on explicit refresh. Each
+module declares its own operations inside `module.json`; there is
+no separate scenarios store. This keeps the module manifest as the
+single source of truth (FR-006, FR-007) and avoids stale-cache bugs.

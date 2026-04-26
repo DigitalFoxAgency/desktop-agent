@@ -21,6 +21,9 @@ public interface IModuleRegistry
     /// <summary>Returns the module with the given id, or <c>null</c> if absent.</summary>
     Module? Find(ModuleId id);
 
-    /// <summary>Returns the skill with the given (module, skill) pair, or <c>null</c>.</summary>
+    /// <summary>Resolve a (module, operation) pair before delegation. Returns null if missing.</summary>
+    Operation? FindOperation(ModuleId moduleId, string operationId);
+
+    /// <summary>US4 advanced path: resolve a module-internal skill for direct invocation. Returns null if missing.</summary>
     Skill? FindSkill(ModuleId moduleId, SkillId skillId);
 }

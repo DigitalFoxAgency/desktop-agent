@@ -12,6 +12,11 @@ public interface IModuleRegistry
     Task RefreshAsync(CancellationToken ct);
     IReadOnlyList<Module> GetAll();
     Module? Find(ModuleId id);
+
+    /// <summary>Resolve a (module, operation) pair before delegation. Returns null if missing.</summary>
+    Operation? FindOperation(ModuleId moduleId, string operationId);
+
+    /// <summary>US4 advanced path: resolve a module-internal skill for direct invocation. Returns null if missing.</summary>
     Skill? FindSkill(ModuleId moduleId, SkillId skillId);
 }
 

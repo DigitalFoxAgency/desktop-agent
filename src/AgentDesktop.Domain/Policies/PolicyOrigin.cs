@@ -7,17 +7,21 @@ public abstract record PolicyOrigin
     {
     }
 
-    /// <summary>Direct skill invocation by the user (Story US4).</summary>
+    /// <summary>Direct skill invocation by the user (US4 advanced path).</summary>
     public sealed record FromSkill(ModuleId ModuleId, SkillId SkillId) : PolicyOrigin;
 
-    /// <summary>Step within a running scenario (Story US2).</summary>
-    public sealed record FromScenarioStep(ScenarioId ScenarioId, int StepIndex, ModuleId ModuleId, SkillId SkillId) : PolicyOrigin;
+    /// <summary>
+    /// A running delegation: a module is executing one of its
+    /// declared operations and proposed a dangerous action via
+    /// IDelegationCallbacks.RequestConfirmationAsync.
+    /// </summary>
+    public sealed record FromDelegation(ModuleId ModuleId, string OperationId) : PolicyOrigin;
 
-    /// <summary>Returns the (ModuleId, SkillId) pair common to both shapes.</summary>
-    public (ModuleId ModuleId, SkillId SkillId) AsModuleSkill() => this switch
+    /// <summary>Returns the module id common to both shapes (the operation/skill id is shape-specific).</summary>
+    public ModuleId AsModuleId() => this switch
     {
-        FromSkill s => (s.ModuleId, s.SkillId),
-        FromScenarioStep ss => (ss.ModuleId, ss.SkillId),
+        FromSkill s => s.ModuleId,
+        FromDelegation d => d.ModuleId,
         _ => throw new InvalidOperationException($"Unknown PolicyOrigin: {GetType().Name}"),
     };
 }

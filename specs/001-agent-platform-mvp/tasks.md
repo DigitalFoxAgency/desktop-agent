@@ -199,69 +199,91 @@ FR-022 audit log measurable.
 
 ---
 
-## Phase 5: User Story 2 — Run a multi-step scenario (Priority: P2)
+## Phase 5: User Story 2 — Delegate an operation to a module and follow it in chat (Priority: P2)
 
-**Goal**: Subscriber selects "Onboard Client", supplies inputs,
-watches the runner step through the launchpad's skills, with
-human-in-the-loop pauses at the appropriate steps.
+> **Architectural pivot — research.md R18**: this phase is the
+> **delegation runner**, not a platform-side scenario engine.
+> Modules are self-orchestrating; the platform delegates whole
+> operations and observes the module's events. Tasks T087, T091,
+> T093, T094, T096, T097, T098 from earlier drafts of tasks.md are
+> **deleted** (struck out below for traceability) and replaced by
+> the new shape.
+
+**Goal**: Subscriber invokes the launchpad's `onboard-client`
+operation, supplies inputs, and the platform delegates the full
+job to the module. The chat surface streams the module's progress;
+dangerous-action confirmations and human-handoff requests from the
+module surface as platform prompts.
 
 **Independent Test**: Pick `onboard-client` from the catalogue,
-supply niche/city/clientName → runner emits `StepStarted` for
-`init`, then `StepConfirmationRequested` (init is dangerous), and
-on confirm proceeds to subsequent steps; cancellation between
-steps emits `ScenarioCancelled` and skips the rest.
+supply niche/city/clientName → platform calls
+`IRuntimeManager.DelegateAsync(launchpad, "onboard-client", inputs, …)`
+→ the fake module emits a progress event ("starting"), then a
+`RequestConfirmationAsync(DeleteFile, …)` call which the platform
+prompts the user about, then a `RequestHumanHandoffAsync("brief", …)`
+call which opens the handoff dialog, then completes with a
+`DelegationResult { Succeeded = true }` and `siteUrl` output.
+Cancellation mid-delegation propagates and the module's
+finalisation produces a `Succeeded = false` result.
 
 ### Tests for User Story 2
 
-- [ ] T086 [P] [US2] Contract test `IModuleRegistry` in `tests/AgentDesktop.Contracts.Tests/ModuleRegistryContractTests.cs` (valid module loads, unknown `schemaVersion` → `Incompatible`, missing dependency → `Unavailable`, concurrent `RefreshAsync` idempotent)
-- [ ] T087 [P] [US2] Contract test `IScenarioRegistry` + `IScenarioRunner` in `tests/AgentDesktop.Contracts.Tests/ScenarioRunnerContractTests.cs` (linear three-step success, cancel between steps, failure stops, forward binding rejected at load, dangerous step pauses on `StepConfirmationRequested`)
-- [ ] T088 [P] [US2] Bundled-content test in `tests/AgentDesktop.Infrastructure.Tests/Manifests/BundledContentTests.cs` — load `modules/df-client-launchpad/module.json` and the three `scenarios/*.yaml` files and assert all 17 skills + 3 scenarios reach `LoadStatus = Loaded` with no `LoadError`
+- [ ] T086 [P] [US2] Contract test `IModuleRegistry` in `tests/AgentDesktop.Contracts.Tests/ModuleRegistryContractTests.cs` (valid module loads with operations, unknown `schemaVersion` → `Incompatible`, missing dependency → `Unavailable`, concurrent `RefreshAsync` idempotent, `FindOperation` resolves declared operations and returns null for unknown ones)
+- ~~T087 [P] [US2] Contract test IScenarioRegistry + IScenarioRunner~~ — **DELETED** (R18); platform-side scenario engine no longer exists. Delegation contract is covered by T123 in Phase 2 (now extended to cover the new `DelegateAsync` shape).
+- [ ] T088 [P] [US2] Bundled-content test in `tests/AgentDesktop.Infrastructure.Tests/Manifests/BundledContentTests.cs` — load `modules/df-client-launchpad/module.json`, assert it loads with `LoadStatus = Loaded`, exposes the 3 declared operations (`onboard-client`, `launch-ads`, `monthly-report`) with their declared inputs, and resolves all `policies[].actionClass` entries against the baseline classification table
 - [ ] T089 [P] [US2] Integration test `FileSystemModuleSource` schema-validation failure paths in `tests/AgentDesktop.Infrastructure.Tests/Manifests/FileSystemModuleSourceTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T090 [P] [US2] Implement `ModuleManifestValidator` (NJsonSchema, embedded `module.schema.json`) in `src/AgentDesktop.Application/Modules/ModuleManifestValidator.cs`
-- [ ] T091 [P] [US2] Implement `ScenarioManifestValidator` in `src/AgentDesktop.Application/Scenarios/ScenarioManifestValidator.cs`
-- [ ] T092 [US2] Implement `ModuleRegistry : IModuleRegistry` in `src/AgentDesktop.Application/Modules/ModuleRegistry.cs` (idempotent `RefreshAsync`, dependency resolution, `LoadStatus` transitions, O(1) `Find`/`FindSkill`)
-- [ ] T093 [US2] Implement `ScenarioRegistry : IScenarioRegistry` in `src/AgentDesktop.Application/Scenarios/ScenarioRegistry.cs` (compatibility check against module registry, forward-binding rejection at load)
-- [ ] T094 [US2] Implement `ScenarioRunner : IScenarioRunner` in `src/AgentDesktop.Application/Scenarios/ScenarioRunner.cs` — emits the documented event sequence; calls `IPolicyEngine` for every step; pauses on `Human` skills
+- [ ] T090 [P] [US2] Implement `ModuleManifestValidator` (NJsonSchema, embedded `module.schema.json` — including the new `operations[]` schema) in `src/AgentDesktop.Application/Modules/ModuleManifestValidator.cs`
+- ~~T091 [P] [US2] ScenarioManifestValidator~~ — **DELETED** (R18); no platform-side scenarios.
+- [ ] T092 [US2] Implement `ModuleRegistry : IModuleRegistry` in `src/AgentDesktop.Application/Modules/ModuleRegistry.cs` (idempotent `RefreshAsync`, dependency resolution, `LoadStatus` transitions, O(1) `Find`/`FindOperation`/`FindSkill`)
+- ~~T093 [US2] ScenarioRegistry~~ — **DELETED** (R18).
+- ~~T094 [US2] ScenarioRunner~~ — **DELETED** (R18). Replaced by T094-NEW below.
+- [ ] T094-NEW [US2] Implement `DelegationRunner` in `src/AgentDesktop.Application/Modules/DelegationRunner.cs` — orchestrates the platform side of a delegation: validates `(moduleId, operationId)` against `IModuleRegistry.FindOperation`, validates supplied inputs against the operation's declared parameters, calls `IRuntimeManager.DelegateAsync` with a platform-supplied `IDelegationCallbacks` adapter that routes confirmation requests through `IPolicyEngine` and human-handoff requests through `IConfirmationPrompt`-equivalent UI hooks. Streams progress events to the chat as `Message` rows authored as `Agent` with `OriginatingDelegation` set.
 - [ ] T095 [P] [US2] Implement `FileSystemModuleSource` in `src/AgentDesktop.Infrastructure/Manifests/FileSystemModuleSource.cs` (reads `<root>/<id>/module.json`; resolves `sourcePath` relative to module root; understands the launchpad's `source/` submodule layout)
-- [ ] T096 [P] [US2] Implement `FileSystemScenarioSource` in `src/AgentDesktop.Infrastructure/Manifests/FileSystemScenarioSource.cs` (YAML via YamlDotNet + JSON, both validated against the same schema)
-- [ ] T097 [P] [US2] Implement `SessionLogReader : ISessionLog` in `src/AgentDesktop.Infrastructure/Manifests/SessionLogReader.cs` (parses `[<skill>: verified]` markers in the launchpad's `SESSION-LOG.md`; satisfies launchpad constitution §8 gating in scenarios)
-- [ ] T098 [US2] Wire `ScenarioRunner` precondition check that requires `verificationKey` in `SESSION-LOG.md` before a downstream step starts (mirrors launchpad §5/§8); failure emits `StepFailed` with a clear reason
-- [ ] T099 [P] [US2] Implement `ScenarioCatalogViewModel` and `ScenarioCatalogView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
-- [ ] T100 [P] [US2] Implement `ScenarioRunViewModel` and `ScenarioRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — binds the `IAsyncEnumerable<ScenarioEvent>` stream, renders per-step progress, reuses `ConfirmationDialog`. Includes per-view a11y assertion (focus order across step list, screen-reader labels on progress chips, contrast check on event log) in the corresponding headless test under `tests/AgentDesktop.Desktop.Tests/Views/ScenarioRunViewTests.cs` (constitution Principle III)
-- [ ] T101 [US2] Implement human-skill hand-off prompt in `src/AgentDesktop.Desktop/Views/HumanHandoffDialog.axaml` (paused-with-instructions UI for `kind: human` skills like Discovery brief). Includes per-view a11y assertion (focus trapped while open, instructions read by screen reader, "mark done" button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/HumanHandoffDialogTests.cs` (constitution Principle III)
-- [ ] T102 [US2] Register `ModuleRegistry`, `ScenarioRegistry`, `ScenarioRunner`, `FileSystemModuleSource` (configured to read `modules/`), `FileSystemScenarioSource` (configured to read `scenarios/`), `SessionLogReader` in `Program.cs`
-- [ ] T103 [US2] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/OnboardClientScenarioTests.cs` — launches `onboard-client` via UI under `FakeRuntimeManager`, asserts step 0 is `init`, asserts `StepConfirmationRequested` fires before any side effect, asserts cancellation midway emits `ScenarioCancelled`
-- [ ] T125 [US2] Headless test `OnboardClient human-handoff pauses` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/OnboardClientHumanHandoffTests.cs` — covers SC-005: drives `onboard-client` to the `brief` step (`kind: human`), asserts the runner emits a pause event and `HumanHandoffDialog` opens with the launchpad's hand-off instructions, asserts no `StepCompleted` fires until the human marks it done; repeats for `offer` and (if reached) `ads`
+- ~~T096 [P] [US2] FileSystemScenarioSource~~ — **DELETED** (R18); no platform-side scenarios.
+- ~~T097 [P] [US2] SessionLogReader~~ — **DELETED** (R18); the launchpad's `SESSION-LOG.md` verification is the **module's** internal concern, not the platform's.
+- ~~T098 [US2] verificationKey gating~~ — **DELETED** (R18); the module enforces its own `[<skill>: verified]` discipline internally.
+- [ ] T099 [P] [US2] Implement `ModuleCatalogViewModel` and `ModuleCatalogView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — lists installed modules and, per module, the **operations** it declares (name, description, inputs)
+- [ ] T100 [P] [US2] Implement `OperationRunViewModel` and `OperationRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — collects the operation's declared inputs, kicks off `DelegationRunner.RunAsync`, renders the progress event stream, reuses `ConfirmationDialog` for confirmation requests. Includes per-view a11y assertion (focus order, screen-reader labels on progress text, contrast on event log) in the corresponding headless test under `tests/AgentDesktop.Desktop.Tests/Views/OperationRunViewTests.cs` (constitution Principle III)
+- [ ] T101 [US2] Implement human-handoff prompt in `src/AgentDesktop.Desktop/Views/HumanHandoffDialog.axaml` (paused-with-instructions UI driven by the module's `RequestHumanHandoffAsync` calls). Includes per-view a11y assertion (focus trapped while open, instructions read by screen reader, "mark done" button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/HumanHandoffDialogTests.cs` (constitution Principle III)
+- [ ] T102 [US2] Register `ModuleRegistry`, `ModuleManifestValidator`, `DelegationRunner`, `FileSystemModuleSource` (configured to read `modules/`) in `Program.cs`. (No scenario services to register.)
+- [ ] T103 [US2] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/DelegateOnboardClientTests.cs` — launches `onboard-client` via UI under a programmed `FakeRuntimeManager`, asserts the platform calls `DelegateAsync(launchpad, "onboard-client", inputs, …)`, asserts the fake module's progress events render in chat, asserts a programmed `RequestConfirmationAsync(DeleteFile, "/tmp/foo")` opens the confirmation dialog and the user's decline propagates back to the module, asserts `RequestHumanHandoffAsync("brief", …)` opens the handoff dialog and the user's "done" propagates back, asserts cancellation mid-delegation propagates and produces `Succeeded = false`
+- [ ] T125 [US2] Headless test `OnboardClient human-handoff pauses` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/OnboardClientHumanHandoffTests.cs` — covers SC-005: programs the fake module to emit `RequestHumanHandoffAsync` for `brief`, `offer`, and `ads`, asserts the dialog opens with the module-supplied instructions, asserts the module pauses until "done" is clicked
 
 **Checkpoint**: US2 fully functional. The `df-client-launchpad`
-module + all three scenarios load and run end-to-end against a
-fake runtime. SC-005 (`onboard-client` halts at human-in-the-loop
-steps) measurable.
+module loads, declares 3 operations, and the platform delegates
+each operation end-to-end against the fake runtime. SC-005
+(`onboard-client` halts on human-handoff requests from the module)
+measurable.
 
 ---
 
-## Phase 6: User Story 4 — Discover and run individual module skills (Priority: P3)
+## Phase 6: User Story 4 — Browse the module catalogue and pick an operation (Priority: P3)
 
-**Goal**: Browse the module catalogue and invoke a single skill
-directly without going through a scenario.
+**Goal**: Browse the module catalogue and launch one of the
+module's declared operations directly. (Advanced direct **skill**
+invocation — `IRuntimeManager.InvokeSkillAsync` — is included as a
+power-user surface but is not the primary US4 path.)
 
-**Independent Test**: Open module catalogue → see `df-client-launchpad` listed with version, description, and 17 skills → pick `pre-research` → supply `clientPath` → see output rendered in chat.
+**Independent Test**: Open module catalogue → see
+`df-client-launchpad` listed with version, description, and 3
+declared operations → pick `monthly-report` → supply `clientPath`
+→ delegation begins, progress flows into chat.
 
 ### Tests for User Story 4
 
-- [ ] T104 [P] [US4] Contract test for direct skill invocation use case in `tests/AgentDesktop.Contracts.Tests/SkillInvocationContractTests.cs` — happy path through `IPolicyEngine`, missing-required-input refusal, dangerous skill prompts confirmation
-- [ ] T105 [P] [US4] Headless test for `ModuleCatalogView` in `tests/AgentDesktop.Desktop.Tests/Views/ModuleCatalogViewTests.cs` (renders 17 skills, keyboard navigation between them, screen-reader labels on each row, focus order matches visual order, contrast on classification badges) — full a11y assertion per constitution Principle III
+- [ ] T104 [P] [US4] Contract test for direct **skill** invocation (US4 advanced power-user path) in `tests/AgentDesktop.Contracts.Tests/SkillInvocationContractTests.cs` — happy path through `IPolicyEngine`, missing-required-input refusal, dangerous skill prompts confirmation. (Operations use the delegation flow already covered by Phase 5.)
+- [ ] T105 [P] [US4] Headless test for `ModuleCatalogView` in `tests/AgentDesktop.Desktop.Tests/Views/ModuleCatalogViewTests.cs` (renders module rows with declared **operations**; advanced view exposes internal skills; keyboard navigation; screen-reader labels; focus order matches visual order; contrast on classification badges) — full a11y assertion per constitution Principle III
 
 ### Implementation for User Story 4
 
-- [ ] T106 [P] [US4] Implement `SkillInvocationService` in `src/AgentDesktop.Application/Modules/SkillInvocationService.cs` (validates inputs, evaluates via `IPolicyEngine`, dispatches via `IRuntimeManager`, persists output as a `Message`)
-- [ ] T107 [P] [US4] Implement `ModuleCatalogViewModel` and `ModuleCatalogView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
-- [ ] T108 [P] [US4] Implement `SkillRunViewModel` and `SkillRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — input form generated from `SkillParameter[]`, refuses to run until required fields are filled. Includes per-view a11y assertion (every input has an associated label, error messages announced to screen reader, submit button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/SkillRunViewTests.cs` (constitution Principle III)
+- [ ] T106 [P] [US4] Implement `SkillInvocationService` in `src/AgentDesktop.Application/Modules/SkillInvocationService.cs` (validates inputs, evaluates via `IPolicyEngine`, dispatches via `IRuntimeManager.InvokeSkillAsync`, persists output as a `Message` with `OriginatingSkill` set). For advanced direct skill invocation only — operations use `DelegationRunner` from Phase 5.
+- ~~T107 [P] [US4] ModuleCatalogViewModel + View~~ — already created in Phase 5 (T099). Phase 6 extends the view with an "advanced" pane exposing internal skills.
+- [ ] T108 [P] [US4] Implement `SkillRunViewModel` and `SkillRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — input form generated from `SkillParameter[]`, refuses to run until required fields are filled. Visible only in the advanced pane of the module catalogue. Includes per-view a11y assertion (every input has an associated label, error messages announced to screen reader, submit button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/SkillRunViewTests.cs` (constitution Principle III)
 - [ ] T109 [US4] Register `SkillInvocationService` in `Program.cs`
-- [ ] T110 [US4] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/DirectSkillInvocationTests.cs` — pick `pre-research` skill, supply input, assert output rendered, no confirmation prompt (skill is `safe`)
+- [ ] T110 [US4] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/DirectSkillInvocationTests.cs` — pick the launchpad's internal `pre-research` skill from the advanced catalogue pane, supply input, assert output rendered, no confirmation prompt (skill is `safe`)
 
 **Checkpoint**: All four user stories independently functional.
 

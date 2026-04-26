@@ -42,39 +42,54 @@ list.
 
 ---
 
-### User Story 2 - Run a multi-step scenario that composes module skills (Priority: P2)
+### User Story 2 - Delegate a user intent to a module and follow its work in chat (Priority: P2)
 
-A subscriber selects the "Onboard Client" scenario, supplies the
-required inputs (niche, city, client name), and the agent executes
-the scenario by chaining the bundled module's skills in the order
-defined by the module — initialising the client workspace, running
-pre-research, holding the Discovery brief, generating strategy,
-building the site, wiring integrations, and deploying — while the
-user follows progress in the chat surface and approves each
-human-in-the-loop step.
+A subscriber states an intent in the chat ("build me a landing page
+for client X" or picks the "Onboard Client" operation from the
+module catalogue). The agent recognises which **module** owns that
+intent, **delegates the whole job** to that module, and the module
+executes its own internal pipeline end-to-end. The user follows the
+module's progress in the chat surface, confirms any dangerous
+actions the module proposes, and steps in for any human-only
+hand-offs the module asks for.
 
-**Why this priority**: Scenarios are the product's differentiated
-value: pre-composed, repeatable workflows that turn the chat surface
-into a reliable assistant for concrete tasks. Without them the product
-is "just another chat client".
+**Why this priority**: This is what makes the platform more than a
+chat client. The platform's value is that it routes a user's intent
+to the right module, shows the module's work, and brokers safety
+(confirmation + audit) around what the module wants to do. The
+**module owns the steps**; the platform owns the chat-as-bridge,
+the policy gate, and the audit trail.
 
-**Independent Test**: With Story 1 working, the user picks the
-"onboard-client" scenario from the catalogue, enters the required
-inputs, and observes the scenario step through each module skill,
-ending with a deployed client site and a recorded session log.
+**Independent Test**: With Story 1 working, the user invokes the
+launchpad's `onboard-client` operation, supplies the required
+inputs, and observes the module's progress flow into the chat
+in real time. The user confirms each dangerous action the module
+asks about, marks each human-only hand-off complete when done, and
+sees the final result rendered in the chat.
 
 **Acceptance Scenarios**:
 
-1. **Given** a signed-in user with the required modules installed,
-   **When** the user launches the "Review Pull Request" scenario,
-   **Then** the scenario executes its declared steps in order and
-   surfaces progress for each step.
-2. **Given** a scenario step fails, **When** the failure is detected,
-   **Then** the scenario halts, the failing step and error are shown,
-   and the user is offered retry or cancel.
-3. **Given** the user cancels a running scenario, **When** they
-   confirm, **Then** in-flight work stops, no further steps execute,
-   and the cancellation is recorded in the chat history.
+1. **Given** a signed-in user and an installed module that declares
+   the requested operation, **When** the user invokes the operation,
+   **Then** the platform delegates the whole job to that module and
+   the module's progress events stream into the chat surface in
+   real time.
+2. **Given** a running delegation, **When** the module proposes a
+   dangerous action, **Then** the platform's policy engine surfaces
+   a confirmation prompt naming the action and target; the module
+   only proceeds after the user confirms.
+3. **Given** a running delegation, **When** the module reaches a
+   human-only step, **Then** a hand-off prompt opens with the
+   module's instructions; the module pauses until the user marks
+   the step done.
+4. **Given** the user cancels a running delegation, **When** they
+   confirm cancellation, **Then** the platform signals the module
+   to stop; the module finalises any in-flight work, the chat
+   records the cancellation, and no further module work occurs.
+5. **Given** a delegation fails inside the module, **When** the
+   failure is reported back to the platform, **Then** the chat
+   shows the module-supplied error and offers retry or cancel; no
+   further work occurs without explicit user action.
 
 ---
 
@@ -117,29 +132,32 @@ confirming runs the action exactly once.
 
 ---
 
-### User Story 4 - Discover and run individual module skills (Priority: P3)
+### User Story 4 - Browse the module catalogue and pick an operation (Priority: P3)
 
-A subscriber browses the catalogue of installed modules, sees what
-skills each module exposes, and invokes a single skill directly from
-the chat without going through a full scenario.
+A subscriber browses the catalogue of installed modules, sees the
+operations each module exposes (with names, descriptions, declared
+inputs), and launches one directly without typing free-text into
+the chat.
 
-**Why this priority**: Direct skill invocation gives power users a
-faster path for one-off tasks and is also how new scenarios are
-prototyped. It is not required for the very first usable release but
-materially increases day-to-day value.
+**Why this priority**: Direct invocation from the catalogue gives a
+clear discovery surface for what the platform can do today. It is
+not required for the first usable release but materially improves
+day-to-day usability and is the path power users take when they
+already know which module they want.
 
-**Independent Test**: The user opens the module catalogue, picks the
-filesystem module's "list directory" skill, supplies a path, and sees
-the listing rendered in the chat surface.
+**Independent Test**: The user opens the module catalogue, sees the
+launchpad's three operations (`onboard-client`, `launch-ads`,
+`monthly-report`), picks one, supplies its inputs, and the
+corresponding delegation begins.
 
 **Acceptance Scenarios**:
 
-1. **Given** modules are installed, **When** the user opens the module
-   catalogue, **Then** each module's id, version, name, description,
-   and skills are visible.
-2. **Given** a skill requires inputs, **When** the user runs it,
-   **Then** the app prompts for those inputs and refuses to run until
-   they are supplied.
+1. **Given** modules are installed, **When** the user opens the
+   module catalogue, **Then** each module's id, version, name,
+   description, and the list of operations it exposes are visible.
+2. **Given** an operation requires inputs, **When** the user runs
+   it, **Then** the app prompts for those inputs and refuses to run
+   until they are supplied.
 
 ---
 
@@ -154,14 +172,14 @@ the listing rendered in the chat surface.
   the next attempt succeeds once connectivity returns.
 - A module manifest references a dependency that is not installed —
   the module is shown in the catalogue as "unavailable" with the
-  missing dependency named; scenarios that need it cannot start.
-- A scenario references a skill that no longer exists in the latest
-  version of a module — the scenario is shown as "incompatible" with
-  the offending step highlighted; the scenario cannot start until
-  resolved.
+  missing dependency named; the module's operations cannot start.
+- A delegation is requested for an operation that the loaded module
+  no longer declares — the platform refuses the delegation and
+  surfaces a clear "operation not available in installed module
+  version" error; the user can pick another operation.
 - The local agent runtime is not installed or fails to start — the
-  chat surface shows a clear "runtime unavailable" state and offers a
-  retry; no skill or scenario can run until the runtime is healthy.
+  chat surface shows a clear "runtime unavailable" state and offers
+  a retry; no operation can be delegated until the runtime is healthy.
 - Two confirmation prompts arrive in quick succession — they are
   queued and presented one at a time so the user always knows which
   action they are approving.
@@ -192,19 +210,31 @@ the listing rendered in the chat surface.
   modules location at startup and on explicit refresh, validating each
   module's manifest before exposing it.
 - **FR-007**: A module manifest MUST declare at minimum: id, version,
-  name, description, dependencies, skills, MCP servers, prompts, and
-  policies.
-- **FR-008**: The app MUST load scenario definitions from a well-known
-  scenarios location, validate them, and expose only those whose
-  required modules and skills are present and compatible.
-- **FR-009**: A scenario definition MUST declare an ordered sequence
-  of steps, each step naming a module and a skill from that module.
-- **FR-010**: The app MUST execute scenarios step-by-step, surfacing
-  progress, intermediate results, and errors for each step in the
-  chat surface.
-- **FR-011**: The user MUST be able to cancel a running scenario at
-  any time; cancellation MUST stop further steps and record the
-  outcome in the chat history.
+  name, description, dependencies, **operations** (named entry
+  points the platform can delegate to), MCP servers, prompts, and
+  policies. Modules MAY additionally declare internal skills for
+  introspection / advanced direct invocation, but skills are an
+  internal implementation detail of the module — the platform does
+  NOT orchestrate them.
+- **FR-008**: The platform MUST treat each module as **self-orchestrating**:
+  the platform delegates an entire operation to the owning module,
+  the module executes its own internal pipeline, and the platform
+  observes a stream of progress events from the module without
+  driving the module's internal step order.
+- **FR-009**: An operation declaration in a module manifest MUST
+  declare its id, name, description, and inputs. The execution of
+  the operation is the responsibility of the owning module; the
+  platform stores no platform-side step definitions.
+- **FR-010**: The platform MUST surface the module's progress events
+  (text updates, intermediate results, errors) in the chat surface
+  in real time, MUST broker any dangerous-action confirmations the
+  module asks for through the platform's policy engine, and MUST
+  surface human-only hand-off requests the module emits.
+- **FR-011**: The user MUST be able to cancel a running delegation
+  at any time; cancellation MUST be signalled to the running module,
+  the module MUST stop initiating new work, the in-flight work MUST
+  finalise cleanly, and the cancellation MUST be recorded in the
+  chat history.
 - **FR-012**: The app MUST evaluate every agent-initiated action
   through a policy engine and MUST require explicit user confirmation
   for any action classified as dangerous, including but not limited
@@ -233,16 +263,18 @@ the listing rendered in the chat surface.
   that automated tests can exercise the chat, module, scenario, and
   policy surfaces deterministically.
 - **FR-020**: The app MUST ship with one bundled module out of the
-  box: `df-client-launchpad`. The module exposes the full set of
-  Digital Fox client-onboarding skills (init, pre-research,
-  keywords, brief, research, semantics, strategy, strategy-pdf,
-  offer, architecture, design, site, integrations, seo, deploy,
-  ads, reporting).
-- **FR-021**: The app MUST ship with three bundled scenarios out
-  of the box, each composing skills of the bundled module:
-  `onboard-client` (Phase 1, the full onboarding pipeline in
-  `ORDER.md` order), `launch-ads` (Phase 2 ads kickoff),
-  `monthly-report` (Phase 2 reporting).
+  box: `df-client-launchpad`. The module's manifest declares the
+  operations the platform exposes; the module's internal pipeline
+  (its own constitution, `ORDER.md`, skills, `SESSION-LOG.md`
+  verification) is the module's concern and is NOT replicated at
+  the platform level.
+- **FR-021**: The bundled module MUST declare three operations the
+  platform delegates to:
+  - `onboard-client` — full Phase 1 client onboarding (intake →
+    Discovery → strategy → site build → integrations → deploy);
+  - `launch-ads` — Phase 2 ads kickoff;
+  - `monthly-report` — Phase 2 reporting.
+  The platform MUST NOT define its own version of these operations.
 - **FR-022**: The app MUST log every dangerous action — proposed,
   confirmed, declined, executed, succeeded, failed — in a form the
   user can review after the fact.
@@ -265,13 +297,21 @@ the listing rendered in the chat surface.
 - **Module**: A versioned package of agent capabilities. Has an id,
   version, name, description, dependencies, skills, MCP servers,
   prompts, and policies.
-- **Skill**: A named capability exposed by a module. Has an id within
-  its module, a description, declared inputs, declared outputs, and a
-  policy classification (safe vs dangerous).
-- **Scenario**: A versioned, ordered workflow that composes skills
-  across modules. Has an id, version, name, description, declared
-  inputs, and an ordered list of steps; each step names the module
-  and skill it invokes and how its inputs map from prior steps.
+- **Skill** *(internal to a module)*: A named capability inside a
+  module's pipeline. Modules MAY expose their internal skills for
+  introspection or advanced direct invocation, but the platform
+  does NOT orchestrate skills — it delegates whole operations and
+  the module sequences its own skills internally.
+- **Operation**: A high-level user-facing entry point declared by a
+  module's manifest. Has an id (unique within its owning module),
+  name, description, and declared inputs. The platform delegates
+  whole operations to modules; it does NOT orchestrate their
+  internals.
+- **Delegation**: A live execution of an operation. Has the
+  (module, operation) pair, supplied inputs, the conversation it
+  belongs to, an event stream surfaced to the chat, and a
+  current status (Running / AwaitingConfirmation / AwaitingHumanHandoff
+  / Cancelling / Completed / Cancelled / Failed).
 - **Policy Decision**: A record produced by the policy engine for a
   proposed action. Has the proposed action, its classification, the
   user's response (confirmed/declined/skipped), and a timestamp.
@@ -293,23 +333,24 @@ the listing rendered in the chat surface.
   action class listed in FR-012.
 - **SC-004**: 0 dangerous actions execute without an associated,
   user-attributable confirmation record in the audit log.
-- **SC-005**: The "Onboard Client" scenario runs end-to-end on a
-  representative client brief, halting at each declared
-  human-in-the-loop step (Discovery call, content approvals,
-  dashboard work) with a clearly-named hand-off prompt, and resumes
-  to completion once the human marks the step done.
+- **SC-005**: The bundled module's `onboard-client` operation runs
+  end-to-end on a representative client brief, with the module
+  emitting human-handoff requests for each declared human-only
+  step (Discovery call, content approvals, dashboard work) and
+  resuming to completion once the human marks each step done — all
+  without the platform driving any individual module step.
 - **SC-006**: Reopening the app restores the most recent
   conversation, in full and in order, in under 2 seconds on the
   reference machine.
 - **SC-007**: The full automated test suite passes without the real
   local agent runtime installed, demonstrating that the runtime
   abstraction is honoured.
-- **SC-008**: A module or scenario whose schema version is unknown is
+- **SC-008**: A module manifest whose schema version is unknown is
   refused at load time in 100% of cases, with a clear error naming
   the offending file.
-- **SC-009**: 90% of users in a usability study can launch a
-  scenario, follow its progress, and locate the final report without
-  external help.
+- **SC-009**: 90% of users in a usability study can launch a module
+  operation, follow its progress in chat, and locate the final
+  report without external help.
 
 ## Assumptions
 
@@ -323,15 +364,19 @@ the listing rendered in the chat surface.
 - The user supplies their own model API token and pays the model
   provider directly; the platform does not proxy or rebill model
   usage in the MVP.
-- The MVP bundles a single module (`df-client-launchpad`) — every
-  scenario at MVP composes only skills of that module. The platform
-  is multi-module by design (registry, scenario engine, dependency
-  resolution all generic), but cross-module composition will only
-  be exercised once a second module is added post-MVP. The single
-  module is sourced from a separate Git repository and brought into
-  the desktop-agent build via Git submodule; a remote module
-  marketplace, signing infrastructure, and update channel are out
-  of scope for the MVP.
+- The MVP bundles a single module (`df-client-launchpad`). The
+  platform is multi-module by design (registry, dependency
+  resolution, intent → module routing all generic) but the second
+  module will arrive post-MVP. The single module is sourced from a
+  separate Git repository and brought into the desktop-agent build
+  via Git submodule; a remote module marketplace, signing
+  infrastructure, and update channel are out of scope for the MVP.
+- Each module owns its own internal pipeline (the launchpad has
+  `ORDER.md`, `SESSION-LOG.md`, its own skill ordering, possibly
+  its own subagents). The platform never reaches inside a module
+  to drive its steps — the platform delegates whole operations
+  and observes the module's progress events. This is recorded in
+  research.md R18 and is non-negotiable for the MVP.
 - "Dangerous" is defined by the policies declared in module manifests
   plus a baseline set hard-coded in the policy engine (delete files,
   git push, install packages, run shell commands); broader policy

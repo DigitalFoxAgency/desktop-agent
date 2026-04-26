@@ -10,13 +10,16 @@ namespace AgentDesktop.Contracts.Tests.Fakes;
 /// <summary>
 /// Programmable runtime manager used by every test in the suite.
 /// Honours the documented state machine; lets tests pre-program
-/// per-(moduleId, skillId) responses for <see cref="InvokeSkillAsync"/>
-/// and stream chunks for <see cref="StreamChatAsync"/>.
+/// per-(moduleId, operationId) responders for
+/// <see cref="DelegateAsync"/>, per-(moduleId, skillId) responders
+/// for <see cref="InvokeSkillAsync"/>, and a chat streamer for
+/// <see cref="StreamChatAsync"/>.
 /// </summary>
 public sealed class FakeRuntimeManager : IRuntimeManager
 {
     private readonly object _lock = new();
     private readonly SimpleObservable<RuntimeStatus> _statusSubject = new();
+    private readonly Dictionary<(ModuleId, string), Func<DelegationContext, Task<DelegationResult>>> _operationResponders = new();
     private readonly Dictionary<(ModuleId, SkillId), Func<IReadOnlyDictionary<string, object?>, Task<SkillInvocationResult>>> _skillResponders = new();
     private Func<IReadOnlyList<Message>, string, IAsyncEnumerable<MessageChunk>> _chatResponder;
     private RuntimeStatus _status = RuntimeStatus.NotInstalled;
@@ -34,9 +37,21 @@ public sealed class FakeRuntimeManager : IRuntimeManager
 
     public IObservable<RuntimeStatus> StatusChanged => _statusSubject;
 
+    public List<(ModuleId, string OperationId, IReadOnlyDictionary<string, object?> Inputs)> DelegationLog { get; } = new();
+
     public List<(ModuleId, SkillId, IReadOnlyDictionary<string, object?>)> InvocationLog { get; } = new();
 
     public List<string> ChatLog { get; } = new();
+
+    public void ProgramOperation(
+        ModuleId moduleId,
+        string operationId,
+        Func<DelegationContext, Task<DelegationResult>> responder)
+    {
+        ArgumentNullException.ThrowIfNull(operationId);
+        ArgumentNullException.ThrowIfNull(responder);
+        _operationResponders[(moduleId, operationId)] = responder;
+    }
 
     public void ProgramSkill(
         ModuleId moduleId,
@@ -67,7 +82,7 @@ public sealed class FakeRuntimeManager : IRuntimeManager
     public Task EnsureInstalledAsync(CancellationToken ct)
     {
         TransitionTo(RuntimeStatus.Installing);
-        TransitionTo(RuntimeStatus.NotInstalled); // installation only ⇒ ready when StartAsync is called
+        TransitionTo(RuntimeStatus.NotInstalled);
         return Task.CompletedTask;
     }
 
@@ -82,6 +97,37 @@ public sealed class FakeRuntimeManager : IRuntimeManager
     {
         TransitionTo(RuntimeStatus.Stopped);
         return Task.CompletedTask;
+    }
+
+    public Task<DelegationResult> DelegateAsync(
+        ModuleId moduleId,
+        string operationId,
+        IReadOnlyDictionary<string, object?> inputs,
+        ConversationId conversationId,
+        IDelegationCallbacks callbacks,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(operationId);
+        ArgumentNullException.ThrowIfNull(inputs);
+        ArgumentNullException.ThrowIfNull(callbacks);
+
+        if (Status != RuntimeStatus.Ready)
+        {
+            throw new InvalidOperationException(
+                $"Cannot delegate while runtime status is {Status}; must be Ready.");
+        }
+
+        DelegationLog.Add((moduleId, operationId, inputs));
+
+        if (!_operationResponders.TryGetValue((moduleId, operationId), out var responder))
+        {
+            return Task.FromResult(new DelegationResult(
+                Succeeded: false,
+                Outputs: new Dictionary<string, object?>(),
+                Error: $"No programmed delegation responder for ({moduleId}, {operationId})"));
+        }
+
+        return responder(new DelegationContext(moduleId, operationId, inputs, conversationId, callbacks, ct));
     }
 
     public Task<SkillInvocationResult> InvokeSkillAsync(
@@ -155,8 +201,6 @@ public sealed class FakeRuntimeManager : IRuntimeManager
 
     private static void EnsureLegalTransition(RuntimeStatus from, RuntimeStatus to)
     {
-        // Allowed transitions per data-model.md; a fake honours the
-        // same state machine the production runtime promises.
         var legal = (from, to) switch
         {
             (RuntimeStatus.NotInstalled, RuntimeStatus.Installing) => true,
@@ -181,3 +225,12 @@ public sealed class FakeRuntimeManager : IRuntimeManager
         }
     }
 }
+
+/// <summary>Context handed to a programmed delegation responder.</summary>
+public sealed record DelegationContext(
+    ModuleId ModuleId,
+    string OperationId,
+    IReadOnlyDictionary<string, object?> Inputs,
+    ConversationId ConversationId,
+    IDelegationCallbacks Callbacks,
+    CancellationToken Cancellation);

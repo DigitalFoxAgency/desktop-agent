@@ -55,23 +55,6 @@ public readonly record struct SkillId
     public override string ToString() => Value;
 }
 
-/// <summary>Identifier for a <see cref="Scenarios.Scenario"/>.</summary>
-public readonly record struct ScenarioId
-{
-    public ScenarioId(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("ScenarioId cannot be empty.", nameof(value));
-        }
-
-        Value = value;
-    }
-
-    public string Value { get; }
-    public override string ToString() => Value;
-}
-
 /// <summary>Opaque account identifier issued by the subscription service.</summary>
 public readonly record struct AccountId
 {

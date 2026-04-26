@@ -113,22 +113,127 @@ are refused (FR-018).
 
 ---
 
-## R5. Scenario format — YAML with the same schema discipline
+## R5. Operations declared in module manifest (replaces former platform-side scenarios)
 
-**Decision**: Scenarios are YAML files validated against
-`contracts/scenario.schema.json`. JSON is also accepted (same
-schema) for tooling that prefers it.
+**Decision**: A module exposes user-facing entry points as
+**operations** declared inside its `module.json` (under an
+`operations[]` array). The platform uses these for catalogue
+display and intent routing; it does NOT replicate or override the
+module's internal pipeline. Platform-side scenario YAML/JSON files
+are explicitly NOT a thing.
 
 **Rationale**:
-- Scenarios are workflow definitions read and edited by humans
-  (designers, power users); YAML's terseness wins here.
-- Allowing JSON as a second valid encoding keeps scenarios
-  machine-generatable without a separate schema.
+- Operations live where their semantics live — inside the module.
+  Module updates change `module.json` and the change reaches the
+  platform on next refresh; there is no platform-side YAML to
+  drift.
+- A single source of truth (the module) eliminates the failure
+  mode where the platform's scenario file knows things the
+  module's own constitution disagrees with.
+- Module authors decide what the platform can call and what stays
+  internal. The launchpad declares three platform-visible
+  operations (`onboard-client`, `launch-ads`, `monthly-report`)
+  while keeping its 17 internal `SKILL.md` steps as
+  implementation detail.
 
 **Alternatives considered**:
-- **JSON only** — clearer parsing but worse authoring; rejected.
-- **A custom DSL** — unjustified for MVP; revisit if scenarios grow
-  control-flow constructs beyond linear step sequences.
+- **YAML scenarios in `scenarios/` driven by a platform scenario
+  engine** — original design; rejected. See R18.
+- **JSON manifest only with skills, no operations** — would force
+  the platform to either (a) invoke skills individually
+  (re-introducing the rejected scenario engine) or (b) guess which
+  skills are user-facing. Better to have modules declare
+  operations explicitly.
+
+---
+
+## R18. Module-owned orchestration — non-negotiable architectural model
+
+**Decision**: The platform delegates **whole operations** to
+modules and observes a stream of events the module emits. The
+platform does NOT step through a module's internal pipeline. Each
+module is a self-contained agent that runs its own work; the
+platform's role is chat-as-bridge plus safety brokerage
+(confirmations + audit) plus identity/secrets.
+
+**Operating model**:
+1. User states an intent in chat (free text, or a chosen operation
+   from the catalogue).
+2. The platform routes the intent to a module + operation pair.
+3. The platform calls
+   `IRuntimeManager.DelegateAsync(moduleId, operationId, inputs,
+   conversationId, callbacks, ct)` — handing the job to the
+   module.
+4. The module runs its own internal pipeline (its `ORDER.md`,
+   its skills, its `SESSION-LOG.md` verification, possibly its
+   own subagents). The platform does NOT see or influence those
+   steps directly.
+5. The module emits events back through the supplied callbacks:
+   - **Progress text** → chat surface.
+   - **Confirmation requests** for dangerous actions → platform
+     policy engine → user prompt → answer back to module.
+   - **Human-handoff requests** for human-only steps → handoff
+     dialog → user marks done → answer back to module.
+6. The module returns a final result (success / failure) when its
+   internal pipeline finishes.
+7. If the user cancels, the platform signals cancellation; the
+   module finalises in-flight work and stops; the platform
+   records the cancellation in chat history.
+
+**Rationale**:
+- A platform-side scenario engine that drives a module's
+  individual steps **duplicates the module's own constitution**
+  and creates two sources of truth for "what runs in what order".
+  When they diverge — and they will — the user's experience
+  depends on whichever wins, and the module author has no good
+  way to fix it.
+- Self-contained modules align with how OpenClaw thinks about
+  agents: each module *is* an agent (or a small graph of
+  subagents the module spawns); the platform doesn't tell agents
+  how to do their work.
+- Safety stays with the platform precisely because a malicious or
+  buggy module shouldn't be trusted to gate its own dangerous
+  actions or write its own audit log. The callback pattern keeps
+  the policy engine and audit log on the platform side while
+  letting the module own the rest.
+
+**Alternatives considered**:
+- **Platform-driven scenario engine (the original spec)** —
+  rejected; see above and `spec.md` Story 2 rewrite.
+- **Module as a passive library of skills the platform sequences** —
+  same problem as scenarios; rejected.
+- **Module emits a one-shot result with no progress events** —
+  unworkable for long-running operations like client onboarding,
+  which take hours and need human input mid-flight.
+
+**Consequences captured elsewhere**:
+- `spec.md` FR-006 through FR-011, FR-020/FR-021, Story 2,
+  Story 4, edge cases, key entities — all rewritten.
+- `data-model.md` — Scenario aggregate and ScenarioStep types
+  removed; Operation type added under Modules section;
+  Delegation runtime concept added.
+- `contracts/IRuntimeManager.md` — rewritten:
+  `DelegateAsync(moduleId, operationId, inputs, conversationId,
+  callbacks, ct)` replaces `InvokeSkillAsync` as the primary
+  surface. `InvokeSkillAsync` retained only for advanced direct
+  skill invocation (US4 power-user path).
+- `contracts/IScenarioRunner.md` — DELETED.
+- `contracts/scenario.schema.json` — DELETED.
+- `contracts/module.schema.json` — gains `operations[]` array;
+  `skills[]` retained but documented as internal/optional.
+- `modules/df-client-launchpad/module.json` — gains
+  `operations[]`.
+- `scenarios/` directory — DELETED.
+- `tasks.md` Phase 5 — reshaped: scenario-engine tasks deleted,
+  delegation-runner + operation-registry tasks added.
+
+**When to revisit**:
+- A future module legitimately wants the platform to compose
+  across modules (run module-A's operation X, feed its output
+  into module-B's operation Y). At that point we re-introduce
+  composition — but as **a higher-level "playbook" that chains
+  whole operations**, not a step-level scenario. The composition
+  unit stays "operation", never "skill".
 
 ---
 

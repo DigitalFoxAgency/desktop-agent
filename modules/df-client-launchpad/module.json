@@ -3,8 +3,36 @@
   "id": "df-client-launchpad",
   "version": "0.1.0",
   "name": "Digital Fox Client Launchpad",
-  "description": "End-to-end Digital Fox performance-marketing client onboarding pipeline: from intake and Discovery through site build, integrations, deployment, ad launch, and monthly reporting. Source of truth for skill behaviour lives in the launchpad submodule under source/template/.claude/skills/*/SKILL.md.",
+  "description": "End-to-end Digital Fox performance-marketing client onboarding pipeline: from intake and Discovery through site build, integrations, deployment, ad launch, and monthly reporting. Self-orchestrating: the platform delegates whole operations and the module runs its internal pipeline (see source/template/.claude/skills/ORDER.md).",
   "dependencies": [],
+  "operations": [
+    {
+      "id": "onboard-client",
+      "name": "Onboard Client (Phase 1)",
+      "description": "Full Digital Fox client onboarding from intake through live Cloudflare Pages deployment. The module runs its internal pipeline (init → pre-research → brief → research → semantics → strategy → strategy-pdf → offer → architecture → design → site → integrations → seo → deploy) end-to-end, asking the user for confirmation on dangerous actions and pausing on human-only steps (Discovery brief, offer approval).",
+      "inputs": [
+        { "name": "niche", "kind": "string", "required": true, "description": "Client niche / vertical." },
+        { "name": "city", "kind": "string", "required": true, "description": "Client city." },
+        { "name": "clientName", "kind": "string", "required": true, "description": "Client display name." }
+      ]
+    },
+    {
+      "id": "launch-ads",
+      "name": "Launch Ads (Phase 2)",
+      "description": "Phase 2 ads kickoff once the site is live. Human-led step (GUI dashboard work); the module guides and the user executes.",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true, "description": "Absolute path to the client folder created by onboard-client." }
+      ]
+    },
+    {
+      "id": "monthly-report",
+      "name": "Monthly Report (Phase 2)",
+      "description": "Recurring optimisation pass and monthly client report.",
+      "inputs": [
+        { "name": "clientPath", "kind": "path", "required": true, "description": "Absolute path to the client folder." }
+      ]
+    }
+  ],
   "skills": [
     {
       "id": "init",
@@ -227,8 +255,9 @@
   "mcpServers": [],
   "prompts": [],
   "policies": [
-    { "skillId": "brief", "classification": "dangerous", "reason": "Discovery call is human-led per launchpad constitution §14; agent must not auto-fill it." },
-    { "skillId": "offer", "classification": "safe", "reason": "Drafting only; final offer requires human approval per §15." },
-    { "skillId": "ads", "classification": "dangerous", "reason": "Spends client money; requires explicit human authorisation per §12 and §14 (GUI dashboard work)." }
+    { "actionClass": "DeleteFile", "classification": "dangerous", "reason": "Launchpad rewrites client files during site build / strategy generation; deletions are real." },
+    { "actionClass": "GitPush", "classification": "dangerous", "reason": "Launchpad pushes generated code to client GitHub repos." },
+    { "actionClass": "InstallPackage", "classification": "dangerous", "reason": "Launchpad installs npm dependencies during site build." },
+    { "actionClass": "RunShell", "classification": "dangerous", "reason": "Launchpad runs shell commands (git, npm, deploy CLI) inside the client folder." }
   ]
 }

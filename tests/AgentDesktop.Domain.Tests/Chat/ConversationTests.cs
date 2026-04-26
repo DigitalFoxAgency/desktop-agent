@@ -74,7 +74,7 @@ public sealed class ConversationTests
     }
 
     [Fact]
-    public void Message_originating_step_and_skill_are_mutually_exclusive()
+    public void Message_originating_delegation_and_skill_are_mutually_exclusive()
     {
         var act = () => new Message(
             id: MessageId.New(),
@@ -83,10 +83,10 @@ public sealed class ConversationTests
             author: MessageAuthor.Agent,
             body: "hi",
             createdAt: T0,
-            originatingScenarioStep: new ScenarioStepRef(new ScenarioId("s"), 0),
+            originatingDelegation: new DelegationRef(new ModuleId("m"), "onboard-client"),
             originatingSkill: new SkillRef(new ModuleId("m"), new SkillId("k")));
 
-        act.Should().Throw<ArgumentException>().WithMessage("*scenario step*skill*");
+        act.Should().Throw<ArgumentException>().WithMessage("*delegation*skill*");
     }
 
     [Fact]

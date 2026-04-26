@@ -1,15 +1,22 @@
 using AgentDesktop.Application.Chat;
 using AgentDesktop.Domain;
 using AgentDesktop.Domain.Chat;
+using AgentDesktop.Domain.Policies;
 
 namespace AgentDesktop.Application.Runtime;
 
 /// <summary>
-/// Lifecycle and dispatch boundary for the local agent runtime. The
-/// platform talks to OpenClaw + NemoClaw exclusively through this
-/// interface — see <c>contracts/IRuntimeManager.md</c> for the full
+/// Lifecycle and dispatch boundary for the local agent runtime.
+///
+/// <para><b>Architectural model</b>: modules are self-orchestrating
+/// (research.md R18). The platform delegates whole operations via
+/// <see cref="DelegateAsync"/> and the module pushes events back
+/// through <see cref="IDelegationCallbacks"/>. The platform never
+/// drives a module's internal step ordering.</para>
+///
+/// <para>See <c>contracts/IRuntimeManager.md</c> for the full
 /// behavioural contract (state machine, sandbox enforcement,
-/// streaming guarantees).
+/// streaming + delegation guarantees).</para>
 /// </summary>
 public interface IRuntimeManager : IAsyncDisposable
 {
@@ -29,9 +36,24 @@ public interface IRuntimeManager : IAsyncDisposable
     Task StopAsync(CancellationToken ct);
 
     /// <summary>
-    /// Invoke a single skill on the runtime. Throws if Status is not
-    /// <see cref="RuntimeStatus.Ready"/> — the exception names the
-    /// current status. All side effects MUST run inside the sandbox.
+    /// Delegate the full execution of an operation to the owning
+    /// module. The module runs its own internal pipeline; progress,
+    /// confirmation requests, and human-handoff requests flow back
+    /// through <paramref name="callbacks"/>. Returns when the
+    /// module's pipeline finishes.
+    /// </summary>
+    Task<DelegationResult> DelegateAsync(
+        ModuleId moduleId,
+        string operationId,
+        IReadOnlyDictionary<string, object?> inputs,
+        ConversationId conversationId,
+        IDelegationCallbacks callbacks,
+        CancellationToken ct);
+
+    /// <summary>
+    /// Direct invocation of a module-internal skill (US4 advanced
+    /// path only). NOT used to compose multi-step flows. Throws if
+    /// <see cref="Status"/> is not <see cref="RuntimeStatus.Ready"/>.
     /// </summary>
     Task<SkillInvocationResult> InvokeSkillAsync(
         ModuleId moduleId,
@@ -39,7 +61,11 @@ public interface IRuntimeManager : IAsyncDisposable
         IReadOnlyDictionary<string, object?> inputs,
         CancellationToken ct);
 
-    /// <summary>Stream agent reply chunks for a chat turn.</summary>
+    /// <summary>
+    /// Stream agent reply chunks for a chat turn that does NOT
+    /// require module delegation (intent classification, casual
+    /// chat). For module work use <see cref="DelegateAsync"/>.
+    /// </summary>
     IAsyncEnumerable<MessageChunk> StreamChatAsync(
         ConversationId conversationId,
         IReadOnlyList<Message> history,
@@ -47,8 +73,40 @@ public interface IRuntimeManager : IAsyncDisposable
         CancellationToken ct);
 }
 
-/// <summary>Result of a single skill invocation through the runtime.</summary>
+/// <summary>Final result of a delegation. Carries any outputs the module wants to surface.</summary>
+public sealed record DelegationResult(
+    bool Succeeded,
+    IReadOnlyDictionary<string, object?> Outputs,
+    string? Error = null);
+
+/// <summary>Result of a single direct skill invocation (US4 advanced path).</summary>
 public sealed record SkillInvocationResult(
     bool Succeeded,
     IReadOnlyDictionary<string, object?> Outputs,
     string? Error = null);
+
+/// <summary>
+/// Callback channel the running module uses to push events back to
+/// the platform. The runtime adapter implements the platform side
+/// of this and forwards it into the module process.
+/// </summary>
+public interface IDelegationCallbacks
+{
+    /// <summary>Module → platform: progress text. Surfaced verbatim in chat.</summary>
+    Task EmitProgressAsync(string text, CancellationToken ct);
+
+    /// <summary>
+    /// Module → platform: a dangerous action the module is about
+    /// to perform. The platform routes through the policy engine,
+    /// surfaces the user's prompt, and returns Confirmed (true) /
+    /// Declined (false). The module MUST honour the answer.
+    /// </summary>
+    Task<bool> RequestConfirmationAsync(DangerousAction action, CancellationToken ct);
+
+    /// <summary>
+    /// Module → platform: a step that requires the human (Discovery
+    /// call, dashboard work, content approval). Completes when the
+    /// user marks the step done; the module then resumes.
+    /// </summary>
+    Task RequestHumanHandoffAsync(string stepName, string instructions, CancellationToken ct);
+}

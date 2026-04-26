@@ -1,22 +1,31 @@
 namespace AgentDesktop.Domain.Modules;
 
 /// <summary>
-/// Per-skill policy override declared by a module's manifest. The policy
-/// engine combines these with the baseline classification table at
-/// evaluation time.
+/// A module's declaration of how a class of actions it will propose
+/// should be classified by the platform's policy engine. The class
+/// names are either baseline <c>DangerousActionKind</c> values
+/// (DeleteFile / GitPush / InstallPackage / RunShell) or
+/// module-specific strings (which the engine treats as Dangerous
+/// per default-deny per R7).
 /// </summary>
 public sealed record ModulePolicy
 {
-    public ModulePolicy(SkillId skillId, ActionClassification classification, string reason)
+    public ModulePolicy(string actionClass, ActionClassification classification, string reason)
     {
+        ArgumentNullException.ThrowIfNull(actionClass);
         ArgumentNullException.ThrowIfNull(reason);
 
-        SkillId = skillId;
+        if (string.IsNullOrWhiteSpace(actionClass))
+        {
+            throw new ArgumentException("Action class cannot be empty.", nameof(actionClass));
+        }
+
+        ActionClass = actionClass;
         Classification = classification;
         Reason = reason;
     }
 
-    public SkillId SkillId { get; }
+    public string ActionClass { get; }
     public ActionClassification Classification { get; }
     public string Reason { get; }
 }

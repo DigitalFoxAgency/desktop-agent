@@ -26,8 +26,9 @@ ASP.NET Core API validates subscriptions out-of-band.
 - Secure storage: pluggable `ISecretStore` with platform adapters
   (DPAPI on Windows, Keychain on macOS, libsecret on Linux,
   encrypted-file fallback).
-- Manifests: System.Text.Json for `module.json`, YamlDotNet for
-  scenario YAML, JSON Schema validation via NJsonSchema.
+- Manifests: System.Text.Json for `module.json`, JSON Schema
+  validation via NJsonSchema. (No scenario YAML — operations are
+  declared inside `module.json`; see research.md R5/R18.)
 - Process / IPC: `System.Diagnostics.Process` + JSON-RPC over
   stdio for runtime communication; MCP integrations via the
   ModelContextProtocol .NET SDK.
@@ -37,9 +38,10 @@ ASP.NET Core API validates subscriptions out-of-band.
 **Storage**:
 - Local SQLite database at the OS-appropriate per-user data
   directory for conversations, messages, policy decisions, and audit.
-- File-system roots `<userData>/modules/` and
-  `<userData>/scenarios/` for manifests; bundled defaults shipped
-  with the installer.
+- File-system root `<userData>/modules/` for module manifests
+  (each module declares its own operations inside `module.json`);
+  bundled defaults shipped with the installer. No separate
+  `scenarios/` location — see research.md R5/R18.
 - OS secure credential store for the model API token and
   subscription session.
 **Testing**: xUnit unit + integration suites per project, plus a
@@ -76,7 +78,9 @@ golden machine.
 - Single-user-per-OS-account desktop app.
 - ~5 .NET projects + 2 test projects at MVP.
 - 1 bundled module (`df-client-launchpad`, sourced as a Git
-  submodule), 3 bundled scenarios at MVP.
+  submodule). The module declares 3 operations the platform
+  delegates to (`onboard-client`, `launch-ads`, `monthly-report`);
+  there are no platform-side scenarios.
 - Local SQLite expected to stay below 100 MB for typical use.
 
 **Terminology** (worth pinning even at MVP scale to avoid
@@ -152,26 +156,25 @@ src/
 │
 ├── AgentDesktop.Application/       # Use cases, orchestration. Depends on Domain only.
 │   ├── Chat/                       # IChatService + ChatService implementation
-│   ├── Modules/                    # IModuleRegistry, ModuleLoader (uses IModuleSource)
-│   ├── Scenarios/                  # IScenarioRegistry, IScenarioRunner
+│   ├── Modules/                    # IModuleRegistry, ModuleLoader (uses IModuleSource), IDelegationRunner
 │   ├── Policies/                   # IPolicyEngine + DefaultPolicyEngine
-│   ├── Runtime/                    # IRuntimeManager (abstraction only)
+│   ├── Runtime/                    # IRuntimeManager + IDelegationCallbacks (abstractions only)
 │   ├── Secrets/                    # ISecretStore (abstraction only)
 │   ├── Subscription/               # ISubscriptionGate
-│   └── Abstractions/               # IModuleSource, IScenarioSource, IClock, IConfirmationPrompt
+│   └── Abstractions/               # IModuleSource, IClock, IConfirmationPrompt, IAuditLog
 │
 ├── AgentDesktop.Infrastructure/    # Adapters. Depends on Application + Domain.
 │   ├── Persistence/Sqlite/         # SqliteChatRepository, SqliteAuditLog, migrations
-│   ├── Manifests/                  # FileSystemModuleSource, FileSystemScenarioSource (JSON/YAML)
+│   ├── Manifests/                  # FileSystemModuleSource (validates module.json including operations[])
 │   ├── Secrets/                    # WindowsDpapiSecretStore, MacKeychainSecretStore, LinuxSecretStore, EncryptedFileSecretStore
-│   ├── Runtime/                    # ProcessRuntimeManager (OpenClaw + NemoClaw); FakeRuntimeManager lives in tests/AgentDesktop.Contracts.Tests/Fakes/, NOT here
+│   ├── Runtime/                    # ProcessRuntimeManager (OpenClaw + NemoClaw delegation IPC); FakeRuntimeManager lives in tests/AgentDesktop.Contracts.Tests/Fakes/, NOT here
 │   ├── Mcp/                        # McpClient, McpServerLauncher
 │   └── Subscription/               # HttpSubscriptionGate
 │
 ├── AgentDesktop.Desktop/           # Avalonia UI. Depends on Application only.
 │   ├── App.axaml / Program.cs      # Composition root (DI: Application + Infrastructure wiring)
 │   ├── Theme/                      # Design tokens, shared controls
-│   ├── Views/                      # ChatView, ModuleCatalogView, ScenarioView, ConfirmationDialog, SignInView
+│   ├── Views/                      # ChatView, ModuleCatalogView, OperationRunView, ConfirmationDialog, HumanHandoffDialog, SignInView
 │   ├── ViewModels/                 # MVVM via CommunityToolkit.Mvvm
 │   └── Resources/                  # .resx strings
 │
@@ -185,10 +188,10 @@ modules/                            # Bundled modules
     └── source/                     # Git submodule: github.com/DigitalFoxAgency/df-client-launchpad@refactor
         └── ...                     # Launchpad files; SKILL.md paths resolved relative to the module root, e.g. source/template/.claude/skills/init/SKILL.md
 
-scenarios/                          # Bundled scenario definitions (one module ⇒ all step.module = "df-client-launchpad")
-├── onboard-client.yaml             # Phase 1 pipeline (init → … → deploy)
-├── launch-ads.yaml                 # Phase 2: ads
-└── monthly-report.yaml             # Phase 2: reporting
+# NOTE: there is no platform-side scenarios/ directory. Operations
+# are declared inside each module's module.json under operations[].
+# See research.md R5 and R18 for the architectural rationale (modules
+# own their orchestration; the platform delegates whole operations).
 
 tests/
 ├── AgentDesktop.Domain.Tests/
@@ -229,44 +232,42 @@ of truth for skill behaviour; this repo authors a thin
 checkout) that:
 
 - Declares `id`, `version`, `name`, `description`.
-- Enumerates 17 skills (`init`, `pre-research`, `keywords`, `brief`,
-  `research`, `semantics`, `strategy`, `strategy-pdf`, `offer`,
-  `architecture`, `design`, `site`, `integrations`, `seo`, `deploy`,
-  `ads`, `reporting`).
-- Points each skill to its existing `SKILL.md` under
-  `source/template/.claude/skills/<skill>/SKILL.md` via `sourcePath`
-  (resolved relative to the module root,
-  `modules/df-client-launchpad/`).
-- Classifies skills against the platform's policy engine. Every
-  skill that mutates the user's machine, network, or third-party
-  accounts (e.g. `init`, `site`, `integrations`, `deploy`, `ads`)
-  is `dangerous`; pure analysis / authoring skills (e.g.
-  `pre-research`, `research`, `semantics`, `strategy`, `offer`)
-  are `safe`. Per-skill rationale is recorded in the manifest's
-  `policies[]` block.
-- Mirrors the launchpad's own constitution (sequential `ORDER.md`,
-  required `[<skill>: verified]` in `SESSION-LOG.md`) by raising
-  preconditions in the scenario engine: a step refuses to start
-  until the prior step's verification record is present, matching
-  rules §5–§8 of the launchpad's `CONSTITUTION.md`.
-- Surfaces "human-only" steps from launchpad rules §12–§15
-  (Discovery calls, dashboard work, client communication, content
-  approval) as explicit hand-off prompts in chat — they are listed
-  as skills with `kind: human` so the runner pauses cleanly rather
-  than attempting automation.
+- Declares **3 operations** the platform delegates to:
+  - `onboard-client` — Phase 1 client onboarding (the launchpad's
+    full intake-to-deploy pipeline).
+  - `launch-ads` — Phase 2 ads kickoff.
+  - `monthly-report` — Phase 2 reporting.
+  Each operation declares its declared inputs (e.g. `onboard-client`
+  takes `niche`, `city`, `clientName`); execution is the launchpad's
+  responsibility.
+- May ALSO list internal skills under `skills[]` for introspection
+  / advanced direct invocation (US4 power-user path). The platform
+  does NOT orchestrate skills — see research.md R18.
+- Declares per-action `policies[]` so the platform's policy engine
+  knows which classes of actions the launchpad will propose
+  (delete file, git push, install package, run shell), letting
+  the engine pre-classify them as Dangerous before the launchpad
+  ever proposes one. The actual proposals come from the launchpad
+  at runtime via the delegation callback channel
+  (`IDelegationCallbacks.RequestConfirmationAsync`).
+- Surfaces "human-only" steps (Discovery call, content approval,
+  ads dashboard work) by emitting
+  `IDelegationCallbacks.RequestHumanHandoffAsync` from inside the
+  module — the platform shows the hand-off dialog and resumes the
+  module when the user marks the step done.
 
-### Bundled scenarios
+### Bundled operations
 
-| Scenario | Purpose | Steps |
-|----------|---------|-------|
-| `onboard-client` | Phase 1 — full client onboarding from intake to live site. | Non-optional Phase 1 skills in `ORDER.md` order: `init → pre-research → brief → research → semantics → strategy → strategy-pdf → offer → architecture → design → site → integrations → seo → deploy`. (`keywords` is the only optional Phase 1 skill in `ORDER.md`; it is exposed as a direct skill rather than included in this scenario.) |
-| `launch-ads` | Phase 2 — ads kickoff once the site is live. | `ads`. |
-| `monthly-report` | Phase 2 — recurring reporting. | `reporting`. |
+| Operation | Purpose |
+|-----------|---------|
+| `onboard-client` | Phase 1 — full client onboarding from intake to live Cloudflare Pages deployment. The launchpad's internal pipeline (init → pre-research → brief → research → semantics → strategy → … → deploy) runs entirely inside the module. |
+| `launch-ads` | Phase 2 — ads kickoff once the site is live. |
+| `monthly-report` | Phase 2 — recurring optimisation pass and monthly client report. |
 
 Cross-module composition is intentionally not exercised at MVP
-because there is only one module. The registry, scenario engine,
+because there is only one module. The registry, delegation runner,
 and policy engine remain generic — adding a second module
-post-MVP requires no scenario-engine changes.
+post-MVP requires no engine changes.
 
 ## Complexity Tracking
 

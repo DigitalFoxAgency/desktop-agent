@@ -17,6 +17,7 @@ public sealed record Module
         string description,
         int schemaVersion,
         IReadOnlyList<ModuleDependency> dependencies,
+        IReadOnlyList<Operation> operations,
         IReadOnlyList<Skill> skills,
         IReadOnlyList<McpServerDescriptor> mcpServers,
         IReadOnlyList<PromptTemplate> prompts,
@@ -28,6 +29,7 @@ public sealed record Module
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(description);
         ArgumentNullException.ThrowIfNull(dependencies);
+        ArgumentNullException.ThrowIfNull(operations);
         ArgumentNullException.ThrowIfNull(skills);
         ArgumentNullException.ThrowIfNull(mcpServers);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -48,6 +50,25 @@ public sealed record Module
             throw new ArgumentException(
                 "LoadError must be set when LoadStatus is not Loaded.",
                 nameof(loadError));
+        }
+
+        // Loaded modules must declare at least one operation
+        if (loadStatus == ModuleLoadStatus.Loaded && operations.Count == 0)
+        {
+            throw new ArgumentException(
+                "A loaded module must declare at least one operation.",
+                nameof(operations));
+        }
+
+        // Operation ids are unique within a module
+        var dupOp = operations
+            .GroupBy(o => o.Id, StringComparer.Ordinal)
+            .FirstOrDefault(g => g.Count() > 1);
+        if (dupOp is not null)
+        {
+            throw new ArgumentException(
+                $"Duplicate operation id within module: '{dupOp.Key}'.",
+                nameof(operations));
         }
 
         // Skill ids are unique within a module
@@ -78,6 +99,7 @@ public sealed record Module
         Description = description;
         SchemaVersion = schemaVersion;
         Dependencies = new ReadOnlyCollection<ModuleDependency>(dependencies.ToList());
+        Operations = new ReadOnlyCollection<Operation>(operations.ToList());
         Skills = new ReadOnlyCollection<Skill>(skills.ToList());
         McpServers = new ReadOnlyCollection<McpServerDescriptor>(mcpServers.ToList());
         Prompts = new ReadOnlyCollection<PromptTemplate>(prompts.ToList());
@@ -93,6 +115,7 @@ public sealed record Module
     public string Description { get; }
     public int SchemaVersion { get; }
     public IReadOnlyList<ModuleDependency> Dependencies { get; }
+    public IReadOnlyList<Operation> Operations { get; }
     public IReadOnlyList<Skill> Skills { get; }
     public IReadOnlyList<McpServerDescriptor> McpServers { get; }
     public IReadOnlyList<PromptTemplate> Prompts { get; }
@@ -101,7 +124,11 @@ public sealed record Module
     public ModuleLoadStatus LoadStatus { get; }
     public string? LoadError { get; }
 
-    /// <summary>Returns the skill with the given id, or <c>null</c> if not present.</summary>
+    /// <summary>Returns the operation with the given id, or <c>null</c> if not present.</summary>
+    public Operation? FindOperation(string operationId) =>
+        Operations.FirstOrDefault(o => string.Equals(o.Id, operationId, StringComparison.Ordinal));
+
+    /// <summary>Returns the internal skill with the given id, or <c>null</c> if not present.</summary>
     public Skill? FindSkill(SkillId id) => Skills.FirstOrDefault(s => s.Id.Equals(id));
 
     /// <summary>
@@ -128,6 +155,7 @@ public sealed record Module
             "Failed to load: " + error,
             schemaVersion: 1,
             dependencies: Array.Empty<ModuleDependency>(),
+            operations: Array.Empty<Operation>(),
             skills: Array.Empty<Skill>(),
             mcpServers: Array.Empty<McpServerDescriptor>(),
             prompts: Array.Empty<PromptTemplate>(),
