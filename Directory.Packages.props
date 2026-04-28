@@ -3,26 +3,17 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
-  <ItemGroup Label="UI">
-    <PackageVersion Include="Avalonia" Version="11.2.2" />
-    <PackageVersion Include="Avalonia.Desktop" Version="11.2.2" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.2.2" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.2" />
-    <PackageVersion Include="Avalonia.ReactiveUI" Version="11.2.2" />
-    <PackageVersion Include="Avalonia.Diagnostics" Version="11.2.2" />
-    <PackageVersion Include="Avalonia.Headless" Version="11.2.2" />
-    <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.2.2" />
-    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-  </ItemGroup>
-
-  <ItemGroup Label="Persistence">
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.0" />
-    <PackageVersion Include="Dapper" Version="2.1.66" />
-  </ItemGroup>
+  <!--
+    Web platform pivot: package versions are added incrementally as Phase 1
+    scaffolding lands per tasks.md. Desktop-era packages (Avalonia, Sqlite,
+    Dapper, YamlDotNet) are gone; their snapshot lives on the `desktop`
+    branch. New stack: ASP.NET Core, EF Core + Npgsql, Docker.DotNet,
+    Octokit (GitHub App), Anthropic SDK, Serilog, Testcontainers, Playwright
+    via the web client.
+  -->
 
   <ItemGroup Label="Validation / Manifests">
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
-    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
   <ItemGroup Label="DI / Hosting">

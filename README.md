@@ -1,60 +1,51 @@
-# Desktop Agent
+# Agent Platform
 
-Cross-platform desktop AI agent platform built with .NET 9 + Avalonia.
+Multi-tenant web platform where marketing agencies run packaged AI
+workflows end-to-end on a backend that hosts Claude Code per run.
+Agency staff with different roles pick up phases from a role-based
+inbox, hold a chat conversation in their browser, and watch files
+appear in a live read-only file tree. The platform supplies the AI
+under the hood (no BYOK).
+
+The first bundled module is `df-client-launchpad` — Digital Fox's
+client-onboarding pipeline (intake → research → strategy → site →
+deploy → ads → reporting).
 
 ## Status
 
-**Pre-MVP — implementation in progress on `001-agent-platform-mvp`.**
-See `specs/001-agent-platform-mvp/spec.md` for the product spec and
-`specs/001-agent-platform-mvp/plan.md` for the implementation plan.
+**Pre-MVP** — implementation in progress on `001-agent-platform-mvp`.
+The single-user Avalonia desktop MVP is preserved on the `desktop`
+branch as a historical snapshot.
 
-## Quick start
+See:
 
-For development setup, build, and test instructions, see
-[`specs/001-agent-platform-mvp/quickstart.md`](specs/001-agent-platform-mvp/quickstart.md).
+- [`specs/001-agent-platform-mvp/spec.md`](specs/001-agent-platform-mvp/spec.md) — product spec
+- [`specs/001-agent-platform-mvp/plan.md`](specs/001-agent-platform-mvp/plan.md) — implementation plan
+- [`specs/001-agent-platform-mvp/tasks.md`](specs/001-agent-platform-mvp/tasks.md) — task breakdown
 
-Short version:
-
-```bash
-git submodule update --init --recursive
-dotnet restore AgentDesktop.sln
-dotnet build  AgentDesktop.sln -warnaserror
-dotnet test   AgentDesktop.sln --collect:"XPlat Code Coverage"
-```
-
-## Layout
+## Layout (target)
 
 ```
 src/
-├── AgentDesktop.Domain/         pure domain types (no external deps)
-├── AgentDesktop.Application/    use cases, service interfaces
-├── AgentDesktop.Infrastructure/ adapters (SQLite, secret stores, runtime, MCP, HTTP)
-├── AgentDesktop.Desktop/        Avalonia UI + composition root
-└── AgentDesktop.Api/            optional ASP.NET Core subscription endpoint
+├── AgentPlatform.Domain/         pure domain types
+├── AgentPlatform.Application/    use cases, service interfaces
+├── AgentPlatform.Infrastructure/ Postgres, vault, Docker, GitHub, Anthropic
+├── AgentPlatform.Api/            ASP.NET Core API + WebSocket
+└── AgentPlatform.Bridge/         per-run-container process wrapping `claude`
 
-tests/
-├── AgentDesktop.Domain.Tests/
-├── AgentDesktop.Application.Tests/
-├── AgentDesktop.Infrastructure.Tests/
-├── AgentDesktop.Desktop.Tests/  Avalonia.Headless
-├── AgentDesktop.Contracts.Tests/ cross-project contract tests
-└── AgentDesktop.Bench/           BenchmarkDotNet
-
-modules/df-client-launchpad/      bundled product Module (Git submodule + manifest)
-scenarios/                        bundled scenario definitions
-
-specs/001-agent-platform-mvp/     spec, plan, research, data model, contracts, tasks
-docs/architecture/                deferred future-state docs
+web/                              TypeScript + React + Vite + Tailwind
+modules/df-client-launchpad/      bundled module (Git submodule under source/)
+tests/                            xUnit (.NET) + Playwright (web)
 ```
 
-## Documents to read
+## Quick start
 
-| Audience | Start with |
-|----------|-----------|
-| Reviewing the product | [spec.md](specs/001-agent-platform-mvp/spec.md) |
-| Implementing | [plan.md](specs/001-agent-platform-mvp/plan.md) → [tasks.md](specs/001-agent-platform-mvp/tasks.md) |
-| Building / testing locally | [quickstart.md](specs/001-agent-platform-mvp/quickstart.md) |
-| Project rules | [CONSTITUTION](.specify/memory/constitution.md) |
+```bash
+git submodule update --init --recursive
+docker compose up
+```
+
+(Quick start will fill in as Phase 1 scaffolding lands.)
 
 ## License
 
