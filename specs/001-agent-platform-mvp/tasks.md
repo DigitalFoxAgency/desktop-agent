@@ -1,322 +1,330 @@
 ---
-description: "Task list for 001-agent-platform-mvp"
+
+description: "Task list for Agency Workflow Platform (MVP)"
 ---
 
-# Tasks: Desktop AI Agent Platform (MVP)
+# Tasks: Agency Workflow Platform (MVP)
 
 **Input**: Design documents from `/specs/001-agent-platform-mvp/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
+**Prerequisites**: `plan.md` (rewritten 2026-04-28), `spec.md` (rewritten 2026-04-28).
 
-**Tests**: Included by default. The project constitution
-(`.specify/memory/constitution.md`, Principle II) mandates TDD;
-contract tests for every service interface are non-negotiable.
+> **Note on stale supporting docs**: `research.md`, `data-model.md`, `quickstart.md`, and `contracts/` were authored against the original desktop MVP and have not yet been refreshed for the web/server pivot. They are NOT used as authoritative input for this task list. Refreshing them is captured as **T161** in the polish phase.
 
-**Organization**: Tasks are grouped by user story (per spec.md
-priorities). The two P1 stories are split into two phases —
-US1 (sign-in + chat) is the headline MVP slice; US3 (dangerous-action
-confirmation) is also P1 and lands immediately after, because it is
-required before any module skill or scenario can execute safely.
+**Tests**: Tests are included because the constitution (`.specify/memory/constitution.md`, Principle II) mandates TDD with strict coverage gates and `plan.md` restates this requirement.
+
+**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Can run in parallel (different files, no dependencies on
-  incomplete tasks).
-- **[Story]**: `US1` … `US4` map to spec.md user stories.
-- File paths assume the project layout in `plan.md`.
+- **[P]**: Can run in parallel (different files, no dependencies on incomplete tasks)
+- **[Story]**: Which user story this task belongs to (US1, US2, US3, US4, US5)
+- All file paths are absolute from the repo root.
 
 ## Path Conventions
 
-- Solution: `AgentDesktop.sln` at repo root.
-- Source: `src/AgentDesktop.{Domain,Application,Infrastructure,Desktop,Api}/`.
-- Tests: `tests/AgentDesktop.{Domain,Application,Infrastructure,Desktop,Contracts}.Tests/` and `tests/AgentDesktop.Bench/`.
-- Bundled assets: `modules/df-client-launchpad/` (already populated), `scenarios/*.yaml` (already populated).
+Backend (.NET):
+- `src/AgentPlatform.Domain/`, `src/AgentPlatform.Application/`, `src/AgentPlatform.Infrastructure/`, `src/AgentPlatform.Api/`, `src/AgentPlatform.Bridge/`
+- `tests/AgentPlatform.Domain.Tests/`, `tests/AgentPlatform.Application.Tests/`, `tests/AgentPlatform.Infrastructure.Tests/`, `tests/AgentPlatform.Api.Tests/`, `tests/AgentPlatform.Bridge.Tests/`, `tests/AgentPlatform.Contracts.Tests/`, `tests/AgentPlatform.Bench/`
+
+Web client (TypeScript):
+- `web/src/`, `web/e2e/`
+
+Modules:
+- `modules/df-client-launchpad/` (manifest + Git submodule under `source/`)
+
+Operations:
+- `docker-compose.yml`, `Dockerfile.*`, `scripts/`
 
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Solution scaffolding, tooling, and CI baseline.
+**Purpose**: Project skeletons, tooling, and the Docker stack scaffold.
 
-- [x] T001 Create `AgentDesktop.sln` at repo root referencing all projects below
-- [x] T002 [P] Create `src/AgentDesktop.Domain/AgentDesktop.Domain.csproj` (net9.0, nullable enable, no project references)
-- [x] T003 [P] Create `src/AgentDesktop.Application/AgentDesktop.Application.csproj` (references Domain only)
-- [x] T004 [P] Create `src/AgentDesktop.Infrastructure/AgentDesktop.Infrastructure.csproj` (references Application + Domain)
-- [x] T005 [P] Create `src/AgentDesktop.Desktop/AgentDesktop.Desktop.csproj` (Avalonia 11.x, references Application; references Infrastructure only from `Program.cs` composition root)
-- [x] T006 [P] Create `src/AgentDesktop.Api/AgentDesktop.Api.csproj` (ASP.NET Core Minimal APIs, references Domain)
-- [x] T007 [P] Create `tests/AgentDesktop.Domain.Tests/AgentDesktop.Domain.Tests.csproj` (xUnit + FluentAssertions)
-- [x] T008 [P] Create `tests/AgentDesktop.Application.Tests/AgentDesktop.Application.Tests.csproj`
-- [x] T009 [P] Create `tests/AgentDesktop.Infrastructure.Tests/AgentDesktop.Infrastructure.Tests.csproj`
-- [x] T010 [P] Create `tests/AgentDesktop.Desktop.Tests/AgentDesktop.Desktop.Tests.csproj` (Avalonia.Headless + Verify)
-- [x] T011 [P] Create `tests/AgentDesktop.Contracts.Tests/AgentDesktop.Contracts.Tests.csproj` (cross-project contract suite)
-- [x] T012 [P] Create `tests/AgentDesktop.Bench/AgentDesktop.Bench.csproj` (BenchmarkDotNet)
-- [x] T013 [P] Add `Directory.Build.props` at repo root (`<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`, `<Nullable>enable</Nullable>`, `<LangVersion>12</LangVersion>`, `<EnableNETAnalyzers>true</EnableNETAnalyzers>`)
-- [x] T014 [P] Add `.editorconfig` at repo root with .NET formatting rules + analyzer severity overrides aligned with constitution Principle I
-- [x] T015 [P] Add `Directory.Packages.props` (CPM) pinning Avalonia, Microsoft.Data.Sqlite, Dapper, NJsonSchema, YamlDotNet, ModelContextProtocol, CommunityToolkit.Mvvm, xUnit, FluentAssertions, NSubstitute, Verify, BenchmarkDotNet
-- [x] T016 [P] Add `.github/workflows/ci.yml` matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`): restore → build (`-warnaserror`) → test → coverage upload
-- [x] T017 [P] Add `.github/workflows/bench-smoke.yml` (PR-only) running `tests/AgentDesktop.Bench` smoke filter
-- [x] T018 [P] Add `.github/dependabot.yml` for nuget + github-actions ecosystems
-- [x] T019 [P] Add `LICENSE` and skeleton `README.md` (point at `specs/001-agent-platform-mvp/quickstart.md` for build instructions)
+- [ ] T001 Initialize `AgentPlatform.sln` at repo root and add empty solution folders `src/`, `tests/`
+- [ ] T002 [P] Create `src/AgentPlatform.Domain/AgentPlatform.Domain.csproj` (class library, .NET 9, no external refs)
+- [ ] T003 [P] Create `src/AgentPlatform.Application/AgentPlatform.Application.csproj` referencing only Domain
+- [ ] T004 [P] Create `src/AgentPlatform.Infrastructure/AgentPlatform.Infrastructure.csproj` referencing Application + Domain
+- [ ] T005 [P] Create `src/AgentPlatform.Api/AgentPlatform.Api.csproj` (ASP.NET Core, .NET 9) referencing Application + Infrastructure
+- [ ] T006 [P] Create `src/AgentPlatform.Bridge/AgentPlatform.Bridge.csproj` (console, .NET 9) referencing Application
+- [ ] T007 [P] Create test projects: `tests/AgentPlatform.Domain.Tests/`, `tests/AgentPlatform.Application.Tests/`, `tests/AgentPlatform.Infrastructure.Tests/`, `tests/AgentPlatform.Api.Tests/`, `tests/AgentPlatform.Bridge.Tests/`, `tests/AgentPlatform.Contracts.Tests/`, `tests/AgentPlatform.Bench/` with xUnit + FluentAssertions + NSubstitute + Verify
+- [ ] T008 Wire all projects into `AgentPlatform.sln`; verify project-reference layering matches `plan.md` §Project Structure
+- [ ] T009 [P] Add `.editorconfig` at repo root with C# style + analyzer severity rules
+- [ ] T010 [P] Add `Directory.Build.props` at repo root with `TreatWarningsAsErrors=true`, `Nullable=enable`, `LangVersion=latest`, code-coverage MSBuild props
+- [ ] T011 [P] Add `.globalconfig` at repo root with Roslyn analyzer severities (per Constitution I)
+- [ ] T012 [P] Initialize web client: `web/` with Vite + React 18 + TypeScript + Tailwind + TanStack Query (`web/package.json`, `web/vite.config.ts`, `web/tsconfig.json`, `web/tailwind.config.ts`)
+- [ ] T013 [P] Configure ESLint + Prettier + `tsc --strict` in `web/` (`web/.eslintrc.cjs`, `web/.prettierrc`)
+- [ ] T014 [P] Add Playwright config and base fixtures in `web/e2e/` (`web/playwright.config.ts`, `web/e2e/fixtures.ts`)
+- [ ] T015 Create `docker-compose.yml` at repo root with services: `api`, `web`, `postgres`, `vault`, `worker-daemon`
+- [ ] T016 [P] Create `Dockerfile.api` (multi-stage .NET 9 build → runtime)
+- [ ] T017 [P] Create `Dockerfile.web` (Node build → nginx serving SPA + reverse-proxy to api)
+- [ ] T018 [P] Create `Dockerfile.run-base` for `agentplatform/run-base`: Ubuntu 22.04 + Node 20 + npm + Git + GitHub CLI + Cloudflare Wrangler + the launchpad submodule + the Bridge binary; install Claude Code CLI
+- [ ] T019 Verify the launchpad Git submodule is present at `modules/df-client-launchpad/source/`; if missing, run `git submodule update --init --recursive`
+- [ ] T020 [P] Add repo-level `README.md` describing the agency workflow platform (high-level only; defer detailed architecture docs to T160)
+- [ ] T021 [P] Create `.github/workflows/ci.yml`: build + test on PR (matrix: ubuntu-latest), web `pnpm build` + `pnpm test`, .NET `dotnet build && dotnet test`
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Domain types, service interfaces, persistence schema,
-and runtime fakes — every user story depends on this phase.
+**Purpose**: Domain entities, application abstractions, persistence, auth, secret store, bridge skeleton, contract-test fakes. Required before any user story can begin.
 
-**⚠️ CRITICAL**: No user story phase may begin until this phase
-is complete and `dotnet test` is green.
+**⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-### Domain layer (no external deps)
+### Domain entities
 
-- [x] T020 [P] Create strongly-typed ids in `src/AgentDesktop.Domain/Identifiers.cs` — `ConversationId`, `MessageId`, `ModuleId`, `SkillId`, `ScenarioId`, `PolicyDecisionId`, `AccountId`, `SecretKey` (record structs)
-- [x] T021 [P] Create `src/AgentDesktop.Domain/SemanticVersion.cs` and `SemanticVersionRange.cs` (parser + comparison)
-- [x] T022 [P] Create domain enums in `src/AgentDesktop.Domain/Enums.cs` — `MessageAuthor`, `ActionClassification`, `RuntimeStatus`, `RuntimeKind`, `ModuleLoadStatus`, `ScenarioLoadStatus`, `ModuleSource`, `SkillKind`, `DangerousActionKind`, `PolicyOutcome`, `PolicyExecutionResult`, `SubscriptionStatus`
-- [x] T023 [P] Create chat domain types in `src/AgentDesktop.Domain/Chat/` — `Conversation.cs`, `Message.cs`, `ScenarioStepRef.cs`, `SkillRef.cs`
-- [x] T024 [P] Create module domain types in `src/AgentDesktop.Domain/Modules/` — `Module.cs`, `Skill.cs` (with `Kind`, `SourcePath`, `VerificationKey`), `SkillParameter.cs`, `ModuleDependency.cs`, `McpServerDescriptor.cs`, `PromptTemplate.cs`, `ModulePolicy.cs`
-- [x] T025 [P] Create scenario domain types in `src/AgentDesktop.Domain/Scenarios/` — `Scenario.cs`, `ScenarioStep.cs`, `ScenarioBinding.cs`, `ScenarioStatus.cs`
-- [x] T026 [P] Create policy domain types in `src/AgentDesktop.Domain/Policies/` — `DangerousAction.cs`, `PolicyDecision.cs`, `PolicyOrigin.cs`
-- [x] T027 [P] Create identity domain types in `src/AgentDesktop.Domain/Identity/UserAccount.cs`
-- [x] T028 [P] Domain tests: invariants for Conversation/Message in `tests/AgentDesktop.Domain.Tests/Chat/ConversationTests.cs` (LastActivityAt monotonic, Message.Index unique within Conversation, OriginatingScenarioStep XOR OriginatingSkill)
-- [x] T029 [P] Domain tests: SemanticVersion + range in `tests/AgentDesktop.Domain.Tests/SemanticVersionTests.cs`
+- [ ] T022 [P] `Tenant` entity in `src/AgentPlatform.Domain/Tenants/Tenant.cs`
+- [ ] T023 [P] `User` entity in `src/AgentPlatform.Domain/Tenants/User.cs`
+- [ ] T024 [P] `Role` (admin, marketer, strategist, designer, engineer, media-buyer) in `src/AgentPlatform.Domain/Tenants/Role.cs`
+- [ ] T025 [P] `UserRole` join entity in `src/AgentPlatform.Domain/Tenants/UserRole.cs`
+- [ ] T026 [P] `Module` + `ModuleVersion` entities in `src/AgentPlatform.Domain/Modules/Module.cs`
+- [ ] T027 [P] `WorkflowDef` + `PhaseDef` (ordered phase graph) in `src/AgentPlatform.Domain/Modules/WorkflowDef.cs`
+- [ ] T028 [P] `WorkflowRun` + `PhaseRun` + `RunStatus` enum in `src/AgentPlatform.Domain/Runs/WorkflowRun.cs`
+- [ ] T029 [P] `Assignment` entity in `src/AgentPlatform.Domain/Runs/Assignment.cs`
+- [ ] T030 [P] `InboxItem` entity in `src/AgentPlatform.Domain/Inbox/InboxItem.cs`
+- [ ] T031 [P] `ConfirmationRequest` entity + `ConfirmationDecision` value object in `src/AgentPlatform.Domain/Inbox/ConfirmationRequest.cs`
+- [ ] T032 [P] `DangerousAction`, `ActionClassification` enum, `PolicyDecision` value object in `src/AgentPlatform.Domain/Policies/`
+- [ ] T033 [P] `AuditEntry` entity in `src/AgentPlatform.Domain/Audit/AuditEntry.cs`
+- [ ] T034 [P] `UsageLedgerEntry` entity in `src/AgentPlatform.Domain/Audit/UsageLedgerEntry.cs`
+- [ ] T035 [P] `VaultSecretRef` entity in `src/AgentPlatform.Domain/Secrets/VaultSecretRef.cs`
 
-### Application abstractions (interface-first)
+### Application abstractions
 
-- [x] T030 [P] Define `IClock` in `src/AgentDesktop.Application/Abstractions/IClock.cs`
-- [x] T031 [P] Define `IConfirmationPrompt` in `src/AgentDesktop.Application/Abstractions/IConfirmationPrompt.cs`
-- [x] T032 [P] Define `IAuditLog` in `src/AgentDesktop.Application/Abstractions/IAuditLog.cs`
-- [x] T033 [P] Define `IModuleSource` and `IScenarioSource` in `src/AgentDesktop.Application/Abstractions/`
-- [x] T034 [P] Define `IChatRepository` in `src/AgentDesktop.Application/Chat/IChatRepository.cs`
-- [x] T035 [P] Define `IChatService` + `MessageChunk` in `src/AgentDesktop.Application/Chat/IChatService.cs` (matches `contracts/IChatService.md`)
-- [x] T036 [P] Define `IModuleRegistry` in `src/AgentDesktop.Application/Modules/IModuleRegistry.cs` (matches `contracts/IModuleRegistry.md`)
-- [x] T037 [P] Define `IScenarioRegistry` + `IScenarioRunner` + `ScenarioEvent` in `src/AgentDesktop.Application/Scenarios/IScenarioRunner.cs`
-- [x] T038 [P] Define `IPolicyEngine` in `src/AgentDesktop.Application/Policies/IPolicyEngine.cs`
-- [x] T039 [P] Define `IRuntimeManager` + `SkillInvocationResult` in `src/AgentDesktop.Application/Runtime/IRuntimeManager.cs`
-- [x] T040 [P] Define `ISecretStore` in `src/AgentDesktop.Application/Secrets/ISecretStore.cs`
-- [x] T041 [P] Define `ISubscriptionGate` in `src/AgentDesktop.Application/Subscription/ISubscriptionGate.cs`
-- [x] T042 [P] Define `ISessionLog` in `src/AgentDesktop.Application/Modules/ISessionLog.cs` (reads `[<skill>: verified]` records — required by launchpad scenario gating)
+- [ ] T036 [P] `IClock` in `src/AgentPlatform.Application/Abstractions/IClock.cs`
+- [ ] T037 [P] `IRequestTenantContext` (resolves tenant from auth context) in `src/AgentPlatform.Application/Abstractions/IRequestTenantContext.cs`
+- [ ] T038 [P] `IModuleSource` in `src/AgentPlatform.Application/Abstractions/IModuleSource.cs`
+- [ ] T039 [P] `IModuleRegistry` in `src/AgentPlatform.Application/Modules/IModuleRegistry.cs`
+- [ ] T040 [P] `IPolicyEngine` in `src/AgentPlatform.Application/Policies/IPolicyEngine.cs`
+- [ ] T041 [P] `IRunContainerDriver` (`StartAsync`, `StopAsync`, `EnsureVolumeAsync`) in `src/AgentPlatform.Application/RunContainers/IRunContainerDriver.cs`
+- [ ] T042 [P] `IBridgeChannel` (chat I/O, confirmation, file events) in `src/AgentPlatform.Application/Bridge/IBridgeChannel.cs`
+- [ ] T043 [P] `ISubscriptionGate` in `src/AgentPlatform.Application/Subscription/ISubscriptionGate.cs`
+- [ ] T044 [P] `IUsageMeter` in `src/AgentPlatform.Application/Usage/IUsageMeter.cs`
+- [ ] T045 [P] `IAuditLog` in `src/AgentPlatform.Application/Abstractions/IAuditLog.cs`
+- [ ] T046 [P] `ISecretStore` in `src/AgentPlatform.Application/Secrets/ISecretStore.cs`
+- [ ] T047 [P] `IInboxNotifier` in `src/AgentPlatform.Application/Abstractions/IInboxNotifier.cs`
 
-### Contract-test scaffolding
+### Application implementations
 
-- [x] T043 Create contract-test base in `tests/AgentDesktop.Contracts.Tests/ContractFixture.cs` and `RequiresLiveRuntimeAttribute.cs` (xUnit trait), wired so default CI excludes the live trait
-- [x] T044 [P] Add `tests/AgentDesktop.Contracts.Tests/Fakes/FakeRuntimeManager.cs` — programmable, deterministic, honours full `RuntimeStatus` state machine; can pre-program responses per `(moduleId, skillId)`
-- [x] T045 [P] Add `tests/AgentDesktop.Contracts.Tests/Fakes/FakeClock.cs`, `FakeAuditLog.cs`, `FakeConfirmationPrompt.cs`, `FakeSecretStore.cs`, `FakeChatRepository.cs`
+- [ ] T048 [P] `DefaultPolicyEngine` (baseline classes: DeleteFile, GitPush, InstallPackage, RunShell + per-module manifest policies) in `src/AgentPlatform.Application/Policies/DefaultPolicyEngine.cs`
+- [ ] T049 [P] `BuildStepSemaphore` (host-wide cap = 2) in `src/AgentPlatform.Application/RunContainers/BuildStepSemaphore.cs`
 
-### Infrastructure foundation (no story-specific behaviour yet)
+### Infrastructure (persistence + secrets + manifests)
 
-- [x] T046 Create migrations folder + initial schema script in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/Migrations/0001_init.sql` (tables: `conversations`, `messages`, `policy_decisions`, `audit_events`)
-- [x] T047 [P] Implement `SqliteConnectionFactory` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteConnectionFactory.cs` (resolves per-user data dir, applies migrations on first open)
-- [x] T048 [P] Implement `EncryptedFileSecretStore` (cross-platform fallback, AES-GCM) in `src/AgentDesktop.Infrastructure/Secrets/EncryptedFileSecretStore.cs`
-- [x] T049 [P] Implement `WindowsDpapiSecretStore` in `src/AgentDesktop.Infrastructure/Secrets/WindowsDpapiSecretStore.cs`
-- [x] T050 [P] Implement `MacKeychainSecretStore` in `src/AgentDesktop.Infrastructure/Secrets/MacKeychainSecretStore.cs`
-- [x] T051 [P] Implement `LinuxSecretStore` (libsecret P/Invoke, fallback to `EncryptedFileSecretStore` if unavailable) in `src/AgentDesktop.Infrastructure/Secrets/LinuxSecretStore.cs`
-- [x] T052 Implement `SecretStoreFactory` in `src/AgentDesktop.Infrastructure/Secrets/SecretStoreFactory.cs` selecting the platform adapter at runtime
-- [x] T053 [P] Contract test for `ISecretStore` against the live platform adapter and the encrypted-file fallback in `tests/AgentDesktop.Contracts.Tests/SecretStoreContractTests.cs`
+- [ ] T050 EF Core: `AgentPlatformDbContext` with all entities, value-object configuration, and a global `tenant_id` query filter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/AgentPlatformDbContext.cs`
+- [ ] T051 EF Core initial migration `0001_Initial` in `src/AgentPlatform.Infrastructure/Persistence/Postgres/Migrations/`
+- [ ] T052 [P] `FileEncryptedSecretStore` (AES-GCM, key from env / file) in `src/AgentPlatform.Infrastructure/Secrets/FileEncryptedSecretStore.cs`
+- [ ] T053 [P] `module.schema.json` (declares workflows + phases + role + skill + policies) in `src/AgentPlatform.Infrastructure/Manifests/module.schema.json`
+- [ ] T054 [P] `FileSystemModuleSource` (validates `module.json` against schema; refuses unknown schemaVersion) in `src/AgentPlatform.Infrastructure/Manifests/FileSystemModuleSource.cs`
+- [ ] T055 [P] `PostgresAuditLog` adapter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresAuditLog.cs`
+- [ ] T056 [P] `PostgresUsageMeter` adapter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresUsageMeter.cs`
+- [ ] T057 [P] Update `modules/df-client-launchpad/module.json` schema: replace flat `operations[]`/`skills[]` with `workflows[]` containing ordered `phases[]`, each phase declaring `role` + `skill` + `kind` (per `plan.md` §MVP Module table)
 
-### Desktop composition root
+### Auth + tenant scoping
 
-- [x] T054 Create `src/AgentDesktop.Desktop/Program.cs` — CLI args (`--fake-runtime`), DI registration of Application + Infrastructure (the only Infrastructure-aware file in `Desktop`)
-- [ ] T055 [P] Create design tokens + base styles in `src/AgentDesktop.Desktop/Theme/Tokens.axaml` (color, spacing, typography)
-- [ ] T056 [P] Create localisation infrastructure in `src/AgentDesktop.Desktop/Resources/Strings.resx` and `LocalizationProvider.cs` (English-only at MVP, externalised)
-- [ ] T057 [P] Add UI-thread watchdog (debug-only) in `src/AgentDesktop.Desktop/Diagnostics/UiThreadWatchdog.cs` asserting no >50 ms synchronous work per frame (constitution Principle IV)
-- [x] T123 [P] Contract test `IRuntimeManager` in `tests/AgentDesktop.Contracts.Tests/RuntimeManagerContractTests.cs` covering the documented state machine (`NotInstalled → Installing → Starting → Ready → Degraded → Stopped`), illegal transitions throw, `InvokeSkillAsync` throws a typed exception naming current status when not `Ready`, `StreamChatAsync` finalises exactly once with `IsFinal=true`, double dispose is a no-op (idempotent). Runs against `FakeRuntimeManager` only at MVP; the same tests are reused against `ProcessRuntimeManager` in Phase 7 behind the `RequiresLiveRuntime` trait
+- [ ] T058 ASP.NET Core Identity scaffolding (email + password, no external providers) wired to Postgres in `src/AgentPlatform.Api/Auth/IdentityConfig.cs`
+- [ ] T059 Tenant-scoping middleware (resolves tenant from JWT, populates `IRequestTenantContext`) in `src/AgentPlatform.Api/Middleware/TenantScopeMiddleware.cs`
 
-**Checkpoint**: Foundational ready — all interfaces, fakes, and
-schema in place; `dotnet test` green; user-story phases may begin.
+### Bridge skeleton
+
+- [ ] T060 [P] Bridge entry point + config in `src/AgentPlatform.Bridge/Program.cs`
+- [ ] T061 [P] Claude wrapper interface + stream contracts in `src/AgentPlatform.Bridge/ClaudeWrapper/IClaudeWrapper.cs`
+- [ ] T062 [P] WebSocket transport (Bridge → API) in `src/AgentPlatform.Bridge/Transport/ApiBridgeClient.cs`
+- [ ] T063 [P] File watcher (debounced, glob-filtered) in `src/AgentPlatform.Bridge/FileWatcher/WorkingDirWatcher.cs`
+
+### Contract-test fakes + fixtures
+
+- [ ] T064 [P] `FakeRunContainerDriver` (in-process, programmable) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeRunContainerDriver.cs`
+- [ ] T065 [P] `FakeBridgeChannel` (deterministic chat / confirmation responses) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeBridgeChannel.cs`
+- [ ] T066 [P] `FakeClaudeWrapper` (replays a scripted skill run) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeClaudeWrapper.cs`
+- [ ] T067 Contract test fixtures for `IPolicyEngine`, `IModuleRegistry`, `ISubscriptionGate`, `IUsageMeter`, `IAuditLog`, `IRunContainerDriver`, `IBridgeChannel`, `ISecretStore` in `tests/AgentPlatform.Contracts.Tests/Fixtures/`
+
+### Test infrastructure
+
+- [ ] T068 Testcontainers harness (real Postgres) base class in `tests/AgentPlatform.Infrastructure.Tests/PostgresFixture.cs`
+
+**Checkpoint**: Foundation ready — user story work can now begin in parallel.
 
 ---
 
-## Phase 3: User Story 1 — Sign in, configure model token, and chat (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 — Agency admin signs in and starts a client onboarding (Priority: P1) 🎯 MVP slice 1
 
-**Goal**: A subscriber can install, sign in, save a model API token,
-send a message, see streamed reply, and find the conversation again
-after restart.
+**Goal**: Admin can sign in, pick a workflow, supply inputs, start a run; the first phase appears in the assigned user's inbox.
 
-**Independent Test**: Fresh install → sign in with valid subscription
-→ paste token → send message → observe streamed reply → close and
-reopen → conversation present in history.
+**Independent Test**: With seeded tenant + admin + a marketer holding `marketer` role: admin signs in, hits `POST /api/runs` with `{moduleId: df-client-launchpad, workflowId: onboard-client, inputs: {...}}`; response returns `runId`; the engineer-role user's `GET /api/inbox` returns one item pointing at the `init` phase.
 
 ### Tests for User Story 1
 
-- [x] T058 [P] [US1] Contract test `IChatService` in `tests/AgentDesktop.Contracts.Tests/ChatServiceContractTests.cs`: persists user message before runtime call, exactly one `IsFinal=true` chunk, cancellation leaves consistent state, `Degraded` runtime emits `System` message + final chunk
-- [x] T059 [P] [US1] Integration test `SqliteChatRepository` round-trip in `tests/AgentDesktop.Infrastructure.Tests/Persistence/SqliteChatRepositoryTests.cs` (real file-backed temp DB)
-- [x] T060 [P] [US1] Integration test `HttpSubscriptionGate` against a `WebApplicationFactory<Program>` of `AgentDesktop.Api` in `tests/AgentDesktop.Infrastructure.Tests/Subscription/HttpSubscriptionGateTests.cs`
-- [x] T061 [P] [US1] Headless UI test `SignInView` keyboard-only flow in `tests/AgentDesktop.Desktop.Tests/Views/SignInViewTests.cs` (a11y assertion: focus order, label association, contrast)
+- [ ] T069 [P] [US1] Contract test for `POST /api/auth/signup` + `POST /api/auth/signin` in `tests/AgentPlatform.Api.Tests/Auth/AuthEndpointTests.cs`
+- [ ] T070 [P] [US1] Contract test for `POST /api/runs` (validates inputs, refuses on subscription expired, returns runId) in `tests/AgentPlatform.Api.Tests/Runs/StartRunTests.cs`
+- [ ] T071 [P] [US1] Contract test for `GET /api/modules` catalogue in `tests/AgentPlatform.Api.Tests/Modules/ModuleCatalogueTests.cs`
+- [ ] T072 [P] [US1] Contract test for `GET /api/inbox` (returns items scoped to tenant + user roles) in `tests/AgentPlatform.Api.Tests/Inbox/InboxEndpointTests.cs`
+- [ ] T073 [P] [US1] Integration test: signup → signin → start `onboard-client` → inbox of `engineer`-role user contains `init` item, in `tests/AgentPlatform.Api.Tests/Integration/StartWorkflowFlowTests.cs`
 
 ### Implementation for User Story 1
 
-- [x] T062 [P] [US1] Implement `SqliteChatRepository : IChatRepository` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteChatRepository.cs` (Dapper, append-only messages, transaction per `SendMessageAsync` finalisation)
-- [x] T063 [P] [US1] Implement `SubscriptionGate` validation cache + grace-window logic in `src/AgentDesktop.Application/Subscription/SubscriptionGate.cs` (uses `ISubscriptionGate` adapter)
-- [x] T064 [P] [US1] Implement `HttpSubscriptionGate` in `src/AgentDesktop.Infrastructure/Subscription/HttpSubscriptionGate.cs` (HttpClient + token storage via `ISecretStore`)
-- [x] T065 [US1] Implement `ChatService : IChatService` in `src/AgentDesktop.Application/Chat/ChatService.cs` — orchestrates `IChatRepository`, `IRuntimeManager.StreamChatAsync`, `ISubscriptionGate`, surfacing `System` messages on runtime degradation (depends on T062, T063, T065's chunk type from foundational T035)
-- [ ] T066 [US1] Application test for `ChatService` ordering and degradation paths in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceTests.cs` (uses `FakeRuntimeManager`, `FakeChatRepository`)
-- [x] T067 [P] [US1] Implement `SignInViewModel` in `src/AgentDesktop.Desktop/ViewModels/SignInViewModel.cs` (CommunityToolkit.Mvvm `[ObservableProperty]`/`[RelayCommand]`)
-- [x] T068 [P] [US1] Implement `SignInView.axaml` in `src/AgentDesktop.Desktop/Views/SignInView.axaml`
-- [x] T069 [P] [US1] Implement `ChatViewModel` in `src/AgentDesktop.Desktop/ViewModels/ChatViewModel.cs` (binds `IAsyncEnumerable<MessageChunk>`)
-- [x] T070 [P] [US1] Implement `ChatView.axaml` in `src/AgentDesktop.Desktop/Views/ChatView.axaml`
-- [x] T071 [P] [US1] Implement `ConversationListViewModel` and `ConversationListView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/`
-- [x] T072 [US1] Wire `Program.cs` to register `ChatService`, `SqliteChatRepository`, `HttpSubscriptionGate`, `SecretStoreFactory`, `IClock`
-- [x] T073 [US1] Implement `Api/Endpoints/SubscriptionEndpoints.cs` — `POST /v1/subscription/validate` returning subscription status (depends on T072 only conceptually; lives in `Api`)
-- [x] T074 [US1] End-to-end smoke test using `FakeRuntimeManager` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/SignInAndChatTests.cs` (sign in → send message → assert chunks render → restart simulation → assert history persisted)
-- [x] T124 [US1] Application test `ChatService` honours `ISubscriptionGate` in `tests/AgentDesktop.Application.Tests/Chat/ChatServiceSubscriptionTests.cs` — covers FR-023: when `ISubscriptionGate` reports `Expired` / `Revoked` / out-of-grace `Unknown`, `ChatService.SendMessageAsync` MUST refuse, surface a `System` message naming the recovery path, leave existing conversations readable via `GetConversationAsync` / `ListConversationsAsync`, and emit no runtime call. Re-enable on transition back to `Active`
+- [ ] T074 [P] [US1] `AuthService` (Identity wrapper: signup, signin, password change) in `src/AgentPlatform.Application/Auth/AuthService.cs`
+- [ ] T075 [P] [US1] `TenantService` (create tenant, add user, assign roles) in `src/AgentPlatform.Application/Tenants/TenantService.cs`
+- [ ] T076 [P] [US1] `PostgresTenantRepository` in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresTenantRepository.cs`
+- [ ] T077 [US1] `DefaultSubscriptionGate` (checks plan + monthly token budget; refuses if exhausted/expired) in `src/AgentPlatform.Infrastructure/Subscription/DefaultSubscriptionGate.cs`
+- [ ] T078 [US1] `ModuleRegistry` implementation (loads via `IModuleSource` at startup; refresh endpoint) in `src/AgentPlatform.Application/Modules/ModuleRegistry.cs`
+- [ ] T079 [US1] `WorkflowRunService.StartAsync` (validates inputs against `WorkflowDef`, creates `WorkflowRun` + first `PhaseRun` + `Assignment` + `InboxItem`, writes audit) in `src/AgentPlatform.Application/Runs/WorkflowRunService.cs`
+- [ ] T080 [US1] `PhaseAssignmentService` (resolves phase role → primary holder; falls back to `WaitingAssignment` if none) in `src/AgentPlatform.Application/Runs/PhaseAssignmentService.cs`
+- [ ] T081 [US1] `/api/auth/signup` + `/api/auth/signin` + `/api/auth/signout` endpoints in `src/AgentPlatform.Api/Endpoints/AuthEndpoints.cs`
+- [ ] T082 [US1] `/api/tenants/{id}/users`, `/api/tenants/{id}/roles`, role-assignment endpoints in `src/AgentPlatform.Api/Endpoints/TenantEndpoints.cs`
+- [ ] T083 [US1] `/api/modules` (list installed modules + workflows) in `src/AgentPlatform.Api/Endpoints/ModuleEndpoints.cs`
+- [ ] T084 [US1] `/api/runs` (POST start, GET list, GET by id) in `src/AgentPlatform.Api/Endpoints/RunEndpoints.cs`
+- [ ] T085 [US1] `/api/inbox` (list items for current user) in `src/AgentPlatform.Api/Endpoints/InboxEndpoints.cs`
+- [ ] T086 [US1] Audit log entries for tenant lifecycle, sign-in, run-start, role-assignment events
+- [ ] T087 [P] [US1] Web sign-in page in `web/src/pages/SignIn.tsx`
+- [ ] T088 [P] [US1] Web sign-up page (creates tenant + admin user) in `web/src/pages/SignUp.tsx`
+- [ ] T089 [P] [US1] Web agency dashboard (runs list, recent activity) in `web/src/pages/Dashboard.tsx`
+- [ ] T090 [P] [US1] Web run-starter form (pick workflow, supply inputs, submit) in `web/src/pages/StartRun.tsx`
+- [ ] T091 [P] [US1] API client wrapper (auth-aware fetch) in `web/src/api/client.ts`
+- [ ] T092 [P] [US1] Web routing + protected routes in `web/src/App.tsx`
+- [ ] T093 [US1] Module-registry seeding on API startup: load `df-client-launchpad/module.json`; refuse if `schemaVersion` unknown
 
-**Checkpoint**: US1 fully functional. SC-001 (≤5 min onboarding),
-SC-002 (≤2 s first chunk), SC-006 (≤2 s history restore) measurable.
-
----
-
-## Phase 4: User Story 3 — Confirm dangerous actions before they happen (Priority: P1)
-
-**Goal**: Every dangerous action surfaces a confirmation prompt
-naming action + target before any side effect; declining skips,
-confirming runs once.
-
-**Independent Test**: Trigger an agent request that would delete a
-file → see confirmation prompt naming the file → decline → confirm
-no deletion + chat records skip → trigger again → confirm → file
-deleted exactly once + audit entry recorded.
-
-### Tests for User Story 3
-
-- [x] T075 [P] [US3] Contract test `IPolicyEngine` in `tests/AgentDesktop.Contracts.Tests/PolicyEngineContractTests.cs` covering each baseline `DangerousActionKind`, `Safe` skips prompt, module override `Safe→Dangerous`, decline → no execution + audit entry, single-use Confirmed, prompts serialised, unknown `Kind` → `Dangerous`
-- [x] T076 [P] [US3] Branch-coverage test for `DefaultPolicyEngine` in `tests/AgentDesktop.Application.Tests/Policies/DefaultPolicyEngineCoverageTests.cs` (constitution gate: 100% branch coverage on the engine)
-- [x] T077 [P] [US3] Headless a11y test for `ConfirmationDialog` in `tests/AgentDesktop.Desktop.Tests/Views/ConfirmationDialogTests.cs` (keyboard-only confirm/decline, target text reads correctly to a screen-reader stub, focus trapped while open)
-
-### Implementation for User Story 3
-
-- [x] T078 [P] [US3] Implement baseline classification table in `src/AgentDesktop.Application/Policies/BaselineClassificationTable.cs` (enumerates `DangerousActionKind`)
-- [x] T079 [US3] Implement `DefaultPolicyEngine : IPolicyEngine` in `src/AgentDesktop.Application/Policies/DefaultPolicyEngine.cs` (combines baseline + module-declared `ModulePolicy`, queues prompts via `IConfirmationPrompt`, writes `PolicyDecision` through `IAuditLog`)
-- [x] T080 [P] [US3] Implement `SqliteAuditLog : IAuditLog` in `src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteAuditLog.cs` (append-only `audit_events` and `policy_decisions` tables)
-- [x] T081 [P] [US3] Implement `ConfirmationDialog.axaml` in `src/AgentDesktop.Desktop/Views/ConfirmationDialog.axaml` (single shared component reused for every dangerous action)
-- [x] T082 [P] [US3] Implement `AvaloniaConfirmationPrompt : IConfirmationPrompt` in `src/AgentDesktop.Desktop/Adapters/AvaloniaConfirmationPrompt.cs` (serialises requests on a single `SemaphoreSlim`)
-- [x] T083 [US3] Wire `DefaultPolicyEngine` into `SkillInvocationService` (per R18 the platform doesn't drive skills from `ChatService`; direct skill invocation is the engine entry point) so all agent-initiated actions evaluate through the engine before the runtime executes them
-- [x] T084 [US3] `SkillInvocationService` surfaces a `System` message naming the `PolicyDecisionId` on `Declined`/`Skipped`/`Expired` outcomes (visible in chat surface, traceable via `PolicyDecisionId`)
-- [x] T085 [US3] Register `DefaultPolicyEngine`, `SqliteAuditLog`, `AvaloniaConfirmationPrompt` in `Program.cs`
-
-**Checkpoint**: US3 fully functional. SC-003 (100% of dangerous
-actions prompted), SC-004 (0 unconfirmed dangerous executions),
-FR-022 audit log measurable.
+**Checkpoint**: Admin can sign up, sign in, start a workflow, and the first phase is queued in the assigned user's inbox. Phase opening (US2) is not yet wired.
 
 ---
 
-## Phase 5: User Story 2 — Delegate an operation to a module and follow it in chat (Priority: P2)
+## Phase 4: User Story 2 — Team member opens phase, chats with Claude, watches files appear (Priority: P1) 🎯 MVP slice 2
 
-> **Architectural pivot — research.md R18**: this phase is the
-> **delegation runner**, not a platform-side scenario engine.
-> Modules are self-orchestrating; the platform delegates whole
-> operations and observes the module's events. Tasks T087, T091,
-> T093, T094, T096, T097, T098 from earlier drafts of tasks.md are
-> **deleted** (struck out below for traceability) and replaced by
-> the new shape.
+**Goal**: Assigned user opens a phase; a per-run container starts hosting `claude`; chat streams in; the run's working dir streams a read-only file tree.
 
-**Goal**: Subscriber invokes the launchpad's `onboard-client`
-operation, supplies inputs, and the platform delegates the full
-job to the module. The chat surface streams the module's progress;
-dangerous-action confirmations and human-handoff requests from the
-module surface as platform prompts.
-
-**Independent Test**: Pick `onboard-client` from the catalogue,
-supply niche/city/clientName → platform calls
-`IRuntimeManager.DelegateAsync(launchpad, "onboard-client", inputs, …)`
-→ the fake module emits a progress event ("starting"), then a
-`RequestConfirmationAsync(DeleteFile, …)` call which the platform
-prompts the user about, then a `RequestHumanHandoffAsync("brief", …)`
-call which opens the handoff dialog, then completes with a
-`DelegationResult { Succeeded = true }` and `siteUrl` output.
-Cancellation mid-delegation propagates and the module's
-finalisation produces a `Succeeded = false` result.
+**Independent Test**: With a phase assigned to a marketer (from US1): they open it via the web UI; within ~3 seconds the chat surface loads with Claude's first response streaming; when Claude writes a file, the file tree shows it within 2 seconds.
 
 ### Tests for User Story 2
 
-- [x] T086 [P] [US2] Contract test `IModuleRegistry` in `tests/AgentDesktop.Contracts.Tests/ModuleRegistryContractTests.cs` (valid module loads with operations, unknown `schemaVersion` → `Incompatible`, missing dependency → `Unavailable`, concurrent `RefreshAsync` idempotent, `FindOperation` resolves declared operations and returns null for unknown ones)
-- ~~T087 [P] [US2] Contract test IScenarioRegistry + IScenarioRunner~~ — **DELETED** (R18); platform-side scenario engine no longer exists. Delegation contract is covered by T123 in Phase 2 (now extended to cover the new `DelegateAsync` shape).
-- [x] T088 [P] [US2] Bundled-content test in `tests/AgentDesktop.Infrastructure.Tests/Manifests/BundledContentTests.cs` — load `modules/df-client-launchpad/module.json`, assert it loads with `LoadStatus = Loaded`, exposes the 3 declared operations (`onboard-client`, `launch-ads`, `monthly-report`) with their declared inputs, and resolves all `policies[].actionClass` entries against the baseline classification table
-- [ ] T089 [P] [US2] Integration test `FileSystemModuleSource` schema-validation failure paths in `tests/AgentDesktop.Infrastructure.Tests/Manifests/FileSystemModuleSourceTests.cs`
+- [ ] T094 [P] [US2] Contract test: `WebSocket /ws/phase/{phaseRunId}` chat I/O round-trip via `FakeBridgeChannel` in `tests/AgentPlatform.Api.Tests/Hubs/PhaseSessionHubTests.cs`
+- [ ] T095 [P] [US2] Contract test: file-tree event stream propagates writes within 2s (using fake watcher) in `tests/AgentPlatform.Api.Tests/Hubs/FileTreeStreamTests.cs`
+- [ ] T096 [P] [US2] Integration test: open phase → fake Claude streams 3 chunks + writes 2 files → web client sees both in `tests/AgentPlatform.Api.Tests/Integration/PhaseSessionFlowTests.cs`
+- [ ] T097 [P] [US2] Bench: cold-start phase open → first token streamed (target <2s on reference VPS) in `tests/AgentPlatform.Bench/PhaseOpenBench.cs`
 
 ### Implementation for User Story 2
 
-- [x] T090 [P] [US2] Implement `ModuleManifestValidator` (NJsonSchema, embedded `module.schema.json` — including the new `operations[]` schema) in `src/AgentDesktop.Application/Modules/ModuleManifestValidator.cs`
-- ~~T091 [P] [US2] ScenarioManifestValidator~~ — **DELETED** (R18); no platform-side scenarios.
-- [x] T092 [US2] Implement `ModuleRegistry : IModuleRegistry` in `src/AgentDesktop.Application/Modules/ModuleRegistry.cs` (idempotent `RefreshAsync`, dependency resolution, `LoadStatus` transitions, O(1) `Find`/`FindOperation`/`FindSkill`)
-- ~~T093 [US2] ScenarioRegistry~~ — **DELETED** (R18).
-- ~~T094 [US2] ScenarioRunner~~ — **DELETED** (R18). Replaced by T094-NEW below.
-- [x] T094-NEW [US2] Implement `DelegationRunner` in `src/AgentDesktop.Application/Modules/DelegationRunner.cs` — services both the top-level agent's `delegate_operation` tool call AND the catalogue-pick UI shortcut (US4). Validates `(moduleId, operationId)` against `IModuleRegistry.FindOperation`, accepts partial inputs (per FR-009 advisory-inputs rule), calls `IRuntimeManager.DelegateAsync` with a platform-supplied `IDelegationCallbacks` adapter that routes: progress → chat (Message rows with `OriginatingDelegation`), confirmation requests → `IPolicyEngine`, human-handoff → handoff dialog, and **`AskUserAsync` → chat-question-pending state** (the next user chat message becomes the answer; new chat turns are blocked while a question is pending).
-- [ ] T126 [US2] Top-level agent contract — define the agent's prompt and tool surface (`list_modules`, `delegate_operation`) in `src/AgentDesktop.Application/Runtime/TopLevelAgentContract.cs` (JSON-Schema descriptors + the platform-controlled prompt fragments). Document that no `ask_user` tool is exposed. This is the platform↔runtime contract the `ProcessRuntimeManager` (T111, Phase 7) honours when launching OpenClaw.
-- [x] T127 [US2] Pending-question router — `IConversationQuestionState` in `src/AgentDesktop.Application/Chat/IConversationQuestionState.cs` plus its `InMemoryConversationQuestionState` implementation. Tracks per-conversation "is a delegation question pending?" state. `ChatService.SendMessageAsync` consults this before calling `RunChatTurnAsync`: if a question is pending the message is delivered to the pending `AskUserAsync` task; otherwise a new chat turn runs.
-- [x] T095 [P] [US2] Implement `FileSystemModuleSource` in `src/AgentDesktop.Infrastructure/Manifests/FileSystemModuleSource.cs` (reads `<root>/<id>/module.json`; resolves `sourcePath` relative to module root; understands the launchpad's `source/` submodule layout)
-- ~~T096 [P] [US2] FileSystemScenarioSource~~ — **DELETED** (R18); no platform-side scenarios.
-- ~~T097 [P] [US2] SessionLogReader~~ — **DELETED** (R18); the launchpad's `SESSION-LOG.md` verification is the **module's** internal concern, not the platform's.
-- ~~T098 [US2] verificationKey gating~~ — **DELETED** (R18); the module enforces its own `[<skill>: verified]` discipline internally.
-- [ ] T099 [P] [US2] Implement `ModuleCatalogViewModel` and `ModuleCatalogView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — lists installed modules and, per module, the **operations** it declares (name, description, inputs)
-- [ ] T100 [P] [US2] Implement `OperationRunViewModel` and `OperationRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — collects the operation's declared inputs, kicks off `DelegationRunner.RunAsync`, renders the progress event stream, reuses `ConfirmationDialog` for confirmation requests. Includes per-view a11y assertion (focus order, screen-reader labels on progress text, contrast on event log) in the corresponding headless test under `tests/AgentDesktop.Desktop.Tests/Views/OperationRunViewTests.cs` (constitution Principle III)
-- [ ] T101 [US2] Implement human-handoff prompt in `src/AgentDesktop.Desktop/Views/HumanHandoffDialog.axaml` (paused-with-instructions UI driven by the module's `RequestHumanHandoffAsync` calls). Includes per-view a11y assertion (focus trapped while open, instructions read by screen reader, "mark done" button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/HumanHandoffDialogTests.cs` (constitution Principle III)
-- [ ] T102 [US2] Register `ModuleRegistry`, `ModuleManifestValidator`, `DelegationRunner`, `FileSystemModuleSource` (configured to read `modules/`) in `Program.cs`. (No scenario services to register.)
-- [ ] T103 [US2] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/DelegateOnboardClientTests.cs` — launches `onboard-client` via UI under a programmed `FakeRuntimeManager`, asserts the platform calls `DelegateAsync(launchpad, "onboard-client", inputs, …)`, asserts the fake module's progress events render in chat, asserts a programmed `RequestConfirmationAsync(DeleteFile, "/tmp/foo")` opens the confirmation dialog and the user's decline propagates back to the module, asserts `RequestHumanHandoffAsync("brief", …)` opens the handoff dialog and the user's "done" propagates back, asserts cancellation mid-delegation propagates and produces `Succeeded = false`
-- [ ] T125 [US2] Headless test `OnboardClient human-handoff pauses` in `tests/AgentDesktop.Desktop.Tests/EndToEnd/OnboardClientHumanHandoffTests.cs` — covers SC-005: programs the fake module to emit `RequestHumanHandoffAsync` for `brief`, `offer`, and `ads`, asserts the dialog opens with the module-supplied instructions, asserts the module pauses until "done" is clicked
+- [ ] T098 [US2] `DockerRunContainerDriver` (Docker.DotNet client; spawn `agentplatform/run-base`; mount per-run volume; inject env from vault; resource limits `--memory=2g --cpus=1.0`) in `src/AgentPlatform.Infrastructure/RunContainers/DockerRunContainerDriver.cs`
+- [ ] T099 [US2] `RunVolumeManager` (creates `/var/lib/agency/runs/<runId>/`, manages permissions, archive on completion) in `src/AgentPlatform.Infrastructure/RunContainers/RunVolumeManager.cs`
+- [ ] T100 [US2] Container env-injection: Anthropic platform key + agency vault secrets materialised at container start (in `DockerRunContainerDriver`)
+- [ ] T101 [US2] `PtyClaudeWrapper` (PTY-mode invocation of `claude`; reads stdout/stderr stream; bidirectional stdin) in `src/AgentPlatform.Bridge/ClaudeWrapper/PtyClaudeWrapper.cs`
+- [ ] T102 [US2] Bridge: chat I/O proxy to API WebSocket (token-aware framing) in `src/AgentPlatform.Bridge/Transport/ApiBridgeClient.cs` (extend T062)
+- [ ] T103 [US2] Bridge: file-tree event publisher (debounced 250 ms; ignores `node_modules`, `.git`, `dist`) in `src/AgentPlatform.Bridge/FileWatcher/TreeEventPublisher.cs`
+- [ ] T104 [US2] `PhaseSessionService` (Open/Close session lifecycle; spins up `IRunContainerDriver`, attaches `IBridgeChannel`) in `src/AgentPlatform.Application/Runs/PhaseSessionService.cs`
+- [ ] T105 [US2] `PhaseSessionHub` (WebSocket endpoint `/ws/phase/{phaseRunId}`; fans out chat + file-tree events; routes user input to bridge) in `src/AgentPlatform.Api/Hubs/PhaseSessionHub.cs`
+- [ ] T106 [US2] `/api/phases/{id}/open` + `/api/phases/{id}/close` endpoints in `src/AgentPlatform.Api/Endpoints/PhaseEndpoints.cs`
+- [ ] T107 [US2] `/api/phases/{id}/files` endpoint (read-only paged file-tree listing + file content fetch) in `src/AgentPlatform.Api/Endpoints/PhaseEndpoints.cs`
+- [ ] T108 [US2] `IUsageMeter` wiring: Bridge emits `TokenUsage` events → `PhaseSessionService` writes `UsageLedgerEntry` rows
+- [ ] T109 [US2] Per-run cost cap enforcement: `PhaseSessionService` checks `UsageLedger` after each token batch; pauses run + writes audit if cap exceeded
+- [ ] T110 [US2] Anthropic prompt-cache helper (configures cache breakpoints in API key headers; integrates with Bridge's claude invocation) in `src/AgentPlatform.Infrastructure/Anthropic/PromptCacheHelper.cs`
+- [ ] T111 [P] [US2] Web inbox page (list items, click to open) in `web/src/pages/Inbox.tsx`
+- [ ] T112 [P] [US2] Web phase view (chat pane left, file tree right) in `web/src/pages/Phase.tsx`
+- [ ] T113 [P] [US2] `ChatPane` component (streamed message rendering, input box) in `web/src/components/ChatPane.tsx`
+- [ ] T114 [P] [US2] `FileTree` component (lazy-loaded, read-only, virtualised for large trees) in `web/src/components/FileTree.tsx`
+- [ ] T115 [P] [US2] WebSocket helper in `web/src/api/ws.ts`
+- [ ] T116 [P] [US2] Phase resume flow: re-opening a phase mid-session reattaches to the running container if it's still alive
 
-**Checkpoint**: US2 fully functional. The `df-client-launchpad`
-module loads, declares 3 operations, and the platform delegates
-each operation end-to-end against the fake runtime. SC-005
-(`onboard-client` halts on human-handoff requests from the module)
-measurable.
+**Checkpoint**: A single user can open an assigned phase, hold a real Claude conversation, and watch files appear. **This + US1 + US4 is the shippable MVP.**
 
 ---
 
-## Phase 6: User Story 4 — Browse the module catalogue and pick an operation (Priority: P3)
+## Phase 5: User Story 3 — Phase hand-off between roles (Priority: P1)
 
-**Goal**: Browse the module catalogue and launch one of the
-module's declared operations directly. (Advanced direct **skill**
-invocation — `IRuntimeManager.InvokeSkillAsync` — is included as a
-power-user surface but is not the primary US4 path.)
+**Goal**: When a phase completes, the next phase is created and assigned to whoever holds its required role; their inbox lights up; opening the new phase mounts the same persistent volume.
 
-**Independent Test**: Open module catalogue → see
-`df-client-launchpad` listed with version, description, and 3
-declared operations → pick `monthly-report` → supply `clientPath`
-→ delegation begins, progress flows into chat.
+**Independent Test**: Drive `init` to completion (the launchpad writes `init: verified` to `SESSION-LOG.md`); within 5 seconds the marketer's inbox shows `pre-research`; opening it loads a new container with the same `<clientPath>/` directory visible.
+
+### Tests for User Story 3
+
+- [ ] T117 [P] [US3] Integration test: complete `init` (faked verification) → `pre-research` assigned to marketer within 5s in `tests/AgentPlatform.Api.Tests/Integration/PhaseHandoffTests.cs`
+- [ ] T118 [P] [US3] Integration test: same volume re-mounts in next phase — file written in phase N visible in phase N+1, in `tests/AgentPlatform.Api.Tests/Integration/VolumePersistenceTests.cs`
+- [ ] T119 [P] [US3] Contract test: `POST /api/phases/{id}/reassign` (admin-only; rejects if not admin) in `tests/AgentPlatform.Api.Tests/Phases/ReassignTests.cs`
+
+### Implementation for User Story 3
+
+- [ ] T120 [US3] `CompletionDetector` in Bridge (watches `SESSION-LOG.md` for `<skill>: verified`; also handles skill exit signals) in `src/AgentPlatform.Bridge/PhaseCompletion/CompletionDetector.cs`
+- [ ] T121 [US3] `WorkflowRunService.OnPhaseCompletedAsync` (resolve next phase from `WorkflowDef`, create next `PhaseRun` + `Assignment` + `InboxItem`, release container, write audit) in `src/AgentPlatform.Application/Runs/WorkflowRunService.cs` (extend T079)
+- [ ] T122 [US3] `IInboxNotifier` implementation: in-app push via WebSocket to the assignee's open clients in `src/AgentPlatform.Infrastructure/Inbox/WebSocketInboxNotifier.cs`
+- [ ] T123 [US3] `/api/phases/{id}/reassign` endpoint (admin-only) in `src/AgentPlatform.Api/Endpoints/PhaseEndpoints.cs` (extend T106)
+- [ ] T124 [US3] `WaitingAssignment` state handling: if the next phase's role has no holder, run pauses with admin notification; `/api/runs/{id}/assign` endpoint to resolve
+- [ ] T125 [US3] `DockerRunContainerDriver`: graceful container teardown on phase completion (flush logs, archive volume snapshot, stop) in `src/AgentPlatform.Infrastructure/RunContainers/DockerRunContainerDriver.cs` (extend T098)
+- [ ] T126 [P] [US3] Inbox live-update via WebSocket in `web/src/pages/Inbox.tsx` (extend T111)
+- [ ] T127 [P] [US3] Reassign UI (admin-only) in `web/src/pages/Phase.tsx` (extend T112)
+- [ ] T128 [P] [US3] `WaitingAssignment` banner + assign-user picker in `web/src/pages/Run.tsx`
+
+**Checkpoint**: A workflow run progresses across role hand-offs. The agency vision is functional end-to-end.
+
+---
+
+## Phase 6: User Story 4 — Confirm dangerous actions before they happen (Priority: P1)
+
+**Goal**: Every dangerous action Claude proposes (delete file, git push, install package, run shell) surfaces a per-occurrence confirmation in the web UI; nothing executes without user consent.
+
+**Independent Test**: Inside a running phase, drive Claude to attempt `rm <file>` — a confirmation appears naming the file and the phase; declining records a skip in the audit log; confirming runs the action exactly once. Build-class actions (e.g. `npm install`) additionally wait on the global build-step semaphore (cap = 2).
 
 ### Tests for User Story 4
 
-- [ ] T104 [P] [US4] Contract test for direct **skill** invocation (US4 advanced power-user path) in `tests/AgentDesktop.Contracts.Tests/SkillInvocationContractTests.cs` — happy path through `IPolicyEngine`, missing-required-input refusal, dangerous skill prompts confirmation. (Operations use the delegation flow already covered by Phase 5.)
-- [ ] T105 [P] [US4] Headless test for `ModuleCatalogView` in `tests/AgentDesktop.Desktop.Tests/Views/ModuleCatalogViewTests.cs` (renders module rows with declared **operations**; advanced view exposes internal skills; keyboard navigation; screen-reader labels; focus order matches visual order; contrast on classification badges) — full a11y assertion per constitution Principle III
+- [ ] T129 [P] [US4] Contract test: Bridge emits `ConfirmationRequest` over WebSocket; API persists it; web client receives it within 1s in `tests/AgentPlatform.Api.Tests/Hubs/ConfirmationFlowTests.cs`
+- [ ] T130 [P] [US4] Integration test: Claude proposes delete → prompt shown → user declines → action skipped → audit row written in `tests/AgentPlatform.Api.Tests/Integration/DangerousActionFlowTests.cs`
+- [ ] T131 [P] [US4] Integration test: build-class action waits for semaphore when 2 are running in `tests/AgentPlatform.Api.Tests/Integration/BuildSemaphoreTests.cs`
+- [ ] T132 [P] [US4] Test: per-occurrence — confirming once does not implicitly confirm subsequent prompts in `tests/AgentPlatform.Application.Tests/Policies/PerOccurrenceConfirmationTests.cs`
 
 ### Implementation for User Story 4
 
-- [x] T106 [P] [US4] Implement `SkillInvocationService` in `src/AgentDesktop.Application/Modules/SkillInvocationService.cs` (validates inputs, evaluates via `IPolicyEngine`, dispatches via `IRuntimeManager.InvokeSkillAsync`, persists output as a `Message` with `OriginatingSkill` set). For advanced direct skill invocation only — operations use `DelegationRunner` from Phase 5.
-- ~~T107 [P] [US4] ModuleCatalogViewModel + View~~ — already created in Phase 5 (T099). Phase 6 extends the view with an "advanced" pane exposing internal skills.
-- [ ] T108 [P] [US4] Implement `SkillRunViewModel` and `SkillRunView.axaml` in `src/AgentDesktop.Desktop/{ViewModels,Views}/` — input form generated from `SkillParameter[]`, refuses to run until required fields are filled. Visible only in the advanced pane of the module catalogue. Includes per-view a11y assertion (every input has an associated label, error messages announced to screen reader, submit button keyboard-reachable) in `tests/AgentDesktop.Desktop.Tests/Views/SkillRunViewTests.cs` (constitution Principle III)
-- [ ] T109 [US4] Register `SkillInvocationService` in `Program.cs`
-- [ ] T110 [US4] End-to-end test in `tests/AgentDesktop.Desktop.Tests/EndToEnd/DirectSkillInvocationTests.cs` — pick the launchpad's internal `pre-research` skill from the advanced catalogue pane, supply input, assert output rendered, no confirmation prompt (skill is `safe`)
+- [ ] T133 [US4] Bridge: `IntentInterceptor` hooks Claude tool-use intents (Bash with `rm`/`git push`/`npm`/`pnpm`/`yarn`/shell builtins; Edit/Write to client root) in `src/AgentPlatform.Bridge/PolicyBridge/IntentInterceptor.cs`
+- [ ] T134 [US4] Bridge: `ActionClassifier` (DeleteFile, GitPush, InstallPackage, RunShell, BuildClass) in `src/AgentPlatform.Bridge/PolicyBridge/ActionClassifier.cs`
+- [ ] T135 [US4] Bridge → API: emit `ConfirmationRequest`; suspend Claude until decision arrives; on decline, return error to Claude for graceful skip in `src/AgentPlatform.Bridge/PolicyBridge/ConfirmationGate.cs`
+- [ ] T136 [US4] `IPolicyEngine.ClassifyAsync` consumes module-manifest policies + baseline; returns `ActionClassification`
+- [ ] T137 [US4] `/api/confirmations/{id}/decide` endpoint (POST {decision: confirm | decline}) in `src/AgentPlatform.Api/Endpoints/ConfirmationEndpoints.cs`
+- [ ] T138 [US4] Audit row per `ConfirmationRequest`: proposed, confirmed/declined, executed, succeeded/failed
+- [ ] T139 [US4] `BuildStepSemaphore.AcquireAsync` integrated in `IntentInterceptor` for `BuildClass` actions (waits in `Waiting` state if cap hit)
+- [ ] T140 [US4] Confirmation queue: multiple pending prompts per session presented one at a time
+- [ ] T141 [P] [US4] `ConfirmationDialog` component (names action, target, originating phase) in `web/src/components/ConfirmationDialog.tsx`
+- [ ] T142 [P] [US4] Confirmation queue UI in `web/src/components/ConfirmationDialog.tsx` (extend T141)
+- [ ] T143 [P] [US4] Web `Waiting` indicator on phase view when build-step semaphore blocks in `web/src/pages/Phase.tsx` (extend T112)
 
-**Checkpoint**: All four user stories independently functional.
+**Checkpoint**: All P1 stories functional. Platform is shippable for early-access agencies.
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 7: User Story 5 — Browse module catalogue and pick a workflow (Priority: P3)
 
-**Purpose**: Constitution gates (perf, a11y, security), packaging,
-docs.
+**Goal**: Users browse installed modules + workflows, pick one, and start a run from the catalogue.
 
-> **FR-017 caveat**: "All agent-initiated activity that touches
-> the user's machine MUST run inside the sandboxed runtime layer;
-> activity that bypasses the sandbox MUST be refused" is testable
-> only against the **real** `ProcessRuntimeManager` (T111). MVP
-> demos against `FakeRuntimeManager` (Phases 3–6) cannot exercise
-> sandbox-escape refusal. SC-007 explicitly accepts this trade-off
-> in exchange for a green automated suite without OpenClaw /
-> NemoClaw installed.
+**Independent Test**: With one module installed, `GET /api/modules` returns the launchpad with `onboard-client`, `launch-ads`, `monthly-report` workflows; the catalogue UI lists them; clicking one routes to the run-starter form pre-filled.
 
-- [ ] T111 [P] Implement `ProcessRuntimeManager : IRuntimeManager` in `src/AgentDesktop.Infrastructure/Runtime/ProcessRuntimeManager.cs` (real OpenClaw + NemoClaw orchestration over JSON-RPC stdio) — gated behind `RequiresLiveRuntime` for CI
-- [ ] T112 [P] Implement `McpClient` and `McpServerLauncher` in `src/AgentDesktop.Infrastructure/Mcp/` (routes MCP processes through the sandbox)
-- [ ] T113 [P] BenchmarkDotNet baselines in `tests/AgentDesktop.Bench/` — `RuntimeStartupBenchmarks.cs`, `ChatRoundTripBenchmarks.cs`, `ScenarioStepLatencyBenchmarks.cs`, **`HistoryRestoreLatencyBenchmarks.cs`** (covers SC-006 — measures time from app launch to first conversation rendered, asserts ≤2 s on the per-leg reference machine); commit baseline results under `tests/AgentDesktop.Bench/baseline/`
-- [ ] T114 [P] CI: enforce coverage thresholds in `.github/workflows/ci.yml` — ≥90% Domain + Application, ≥80% Infrastructure + Desktop, **100% branch coverage** for every module that handles user data, IPC boundaries, or filesystem mutations (constitution Principle II): `DefaultPolicyEngine`, `SqliteChatRepository`, `SqliteAuditLog`, `ProcessRuntimeManager`, `FakeRuntimeManager` (programmable surface), `FileSystemModuleSource`, `FileSystemScenarioSource`, `SessionLogReader`, `EncryptedFileSecretStore`, `WindowsDpapiSecretStore`, `MacKeychainSecretStore`, `LinuxSecretStore`
-- [ ] T115 [P] CI: a11y gate using Avalonia.Headless assertions across every shipped view (focus order, label association, contrast, target size)
-- [ ] T116 [P] CI: dependency vulnerability scan (`dotnet list package --vulnerable`) and secret scan (gitleaks); fail on high-severity findings
-- [ ] T117 [P] CI: perf-regression gate fails on >10% regression vs `tests/AgentDesktop.Bench/baseline/`
-- [ ] T118 [P] Packaging — macOS notarised bundle, Windows signed installer, Linux AppImage + .deb, all produced from `dotnet publish` profiles under `build/`
-- [ ] T119 [P] Documentation: update `CLAUDE.md` agent-context block, add architecture diagram in `docs/architecture.md`, fold final decisions back into `research.md` if any drifted
-- [ ] T120 [P] Run `quickstart.md` verbatim on a clean macOS, Windows, and Linux machine; record outcomes; tighten any step that confused a fresh contributor
-- [ ] T121 Final perf check vs constitution budgets: cold start ≤2.0 s, warm interaction p95 ≤100 ms, idle CPU ≤1%, resident memory ≤300 MB after 1 hr; capture results in `tests/AgentDesktop.Bench/baseline/v1.0.0.md`
-- [ ] T122 Tag release candidate `v0.1.0-rc1`, capture release notes summarising US1–US4 + bundled `df-client-launchpad`
+### Tests for User Story 5
+
+- [ ] T144 [P] [US5] Integration test: catalogue lists installed modules + their workflows; refusal of unknown-schemaVersion module surfaces in catalogue as `Unavailable` in `tests/AgentPlatform.Api.Tests/Integration/CatalogueTests.cs`
+
+### Implementation for User Story 5
+
+- [ ] T145 [US5] Extend `/api/modules` (T083) to include workflow descriptions, declared inputs, and per-module status (`Available` | `Unavailable: <reason>`)
+- [ ] T146 [P] [US5] Web catalogue page (cards per module with workflow list) in `web/src/pages/Catalogue.tsx`
+- [ ] T147 [P] [US5] Deep-link from catalogue → run-starter form pre-filled with selected workflow in `web/src/pages/Catalogue.tsx`
+
+**Checkpoint**: Discovery surface in place. Power users can launch workflows without typing.
+
+---
+
+## Phase 8: Polish & Cross-Cutting Concerns
+
+**Purpose**: Cross-story tests, observability, ops, docs, and refreshing the stale supporting artefacts.
+
+- [ ] T148 [P] BenchmarkDotNet bench suite in `tests/AgentPlatform.Bench/` (run-container cold start, bridge round-trip, hand-off propagation, file-tree update latency); CI gate on >10 % regression vs baseline
+- [ ] T149 [P] Playwright E2E: complete `onboard-client` run with hand-offs across 3 distinct roles in `web/e2e/onboard-client.spec.ts`
+- [ ] T150 [P] Playwright E2E: dangerous-action confirmation full loop in `web/e2e/dangerous-action.spec.ts`
+- [ ] T151 [P] A11y audit (axe-core) in Playwright suite in `web/e2e/a11y.spec.ts`
+- [ ] T152 [P] Structured logging via Serilog (JSON to stdout, container-friendly) in `src/AgentPlatform.Api/Logging/SerilogConfig.cs`
+- [ ] T153 [P] Web 404 + 500 + offline pages in `web/src/pages/Error.tsx`
+- [ ] T154 [P] Per-tenant rate-limiting middleware in `src/AgentPlatform.Api/Middleware/TenantRateLimitMiddleware.cs`
+- [ ] T155 [P] Health-check endpoints (`/healthz`, `/readyz`) in `src/AgentPlatform.Api/Endpoints/HealthEndpoints.cs`
+- [ ] T156 GitHub App skeleton (Octokit + JWT App-auth, install-token mint on demand) in `src/AgentPlatform.Infrastructure/GitHub/GitHubAppClient.cs`
+- [ ] T157 Vault: secret-seeding script for local dev in `scripts/seed-vault.sh`
+- [ ] T158 Postgres backup script (nightly `pg_dump` cronned via systemd timer or compose service) in `scripts/backup.sh`
+- [ ] T159 Run-container image hardening: drop unnecessary capabilities, non-root user, read-only root FS where possible, in `Dockerfile.run-base`
+- [ ] T160 [P] README + ARCHITECTURE in `docs/`
+- [ ] T161 Refresh stale Phase 0/1 artefacts: rewrite `specs/001-agent-platform-mvp/research.md`, `data-model.md`, `quickstart.md`, and `contracts/` against the new architecture
+- [ ] T162 [P] CONTRIBUTING + code-of-conduct in repo root
+- [ ] T163 Final constitution check: re-run gates listed in `plan.md` §Constitution Check; address any drift
 
 ---
 
@@ -324,87 +332,115 @@ docs.
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: no dependencies — start immediately.
-- **Foundational (Phase 2)**: requires Setup; **blocks** every user-story phase.
-- **US1 (Phase 3)**: requires Foundational; independently testable.
-- **US3 (Phase 4)**: requires Foundational; independently testable. May start in parallel with US1; integrates cleanly because US1 wires the policy engine in `ChatService` (T083) only after both phases land.
-- **US2 (Phase 5)**: requires Foundational + US3 (because every scenario step routes through the policy engine).
-- **US4 (Phase 6)**: requires Foundational + US3 + US1 (chat surface to render output) + US2 (`IModuleRegistry`).
-- **Polish (Phase 7)**: requires whichever stories are in scope for the release; T111 (real `ProcessRuntimeManager`) intentionally lives here so US1–US4 ship independently of OpenClaw/NemoClaw availability (constitution + SC-007).
+- **Setup (Phase 1)**: No dependencies — can start immediately.
+- **Foundational (Phase 2)**: Depends on Setup. **Blocks all user stories.**
+- **User Story 1 (Phase 3)**: Depends on Foundational. **No upstream story dependencies.**
+- **User Story 2 (Phase 4)**: Depends on Foundational. Functionally requires US1 (a phase to open) but the implementation work is independent — US2 tasks can be developed in parallel with US1 against fakes (`FakeRunContainerDriver`, `FakeBridgeChannel`) and integrated when US1 lands.
+- **User Story 3 (Phase 5)**: Depends on Foundational + US1 + US2 (you need a phase to hand off from). Best implemented after US2 is integration-green.
+- **User Story 4 (Phase 6)**: Depends on Foundational + US2 (the confirmation flow lives inside a phase session). Best parallelised with US3 — different surfaces.
+- **User Story 5 (Phase 7)**: Depends on Foundational + US1's `/api/modules` endpoint. Independent of US2/US3/US4.
+- **Polish (Phase 8)**: Depends on whichever user stories you're shipping in the slice.
 
-### Within each phase
+### Within Each User Story
 
-- Tests written **before** implementation (constitution Principle II).
-- Domain types before Application services that use them.
-- Application interfaces before Infrastructure adapters.
-- Adapters before composition-root wiring.
-- Composition wiring before end-to-end tests.
+- Tests written and FAIL before implementation (per Constitution II).
+- Domain entities → application services → infrastructure adapters → API endpoints → web pages.
+- Story complete and independently green before moving on.
 
-### Parallel opportunities
+### Parallel Opportunities
 
-- All `[P]` tasks within a phase target different files and can run concurrently.
-- Once Foundational is green, US1 and US3 can be staffed in parallel (different teams, different files).
-- US2 and US4 can be parallelised once US3 lands (both consume the policy engine).
-- Polish tasks marked `[P]` (benches, packaging, docs, CI gates) parallelise freely.
+- All Phase 1 `[P]` tasks run in parallel (project scaffolds, configs, Dockerfiles).
+- All Phase 2 `[P]` domain entities and application abstractions run in parallel.
+- All Phase 2 `[P]` infrastructure adapters run in parallel after EF Core context (T050) lands.
+- All `[P]` tests within a story run in parallel.
+- All `[P]` web components within a story run in parallel.
+- US2 tasks against fakes can run in parallel with US1 tasks.
+- US4 tasks can run in parallel with US3 tasks once US2 is green.
 
 ---
 
-## Parallel Example: User Story 1
+## Parallel Example: Phase 2 (Foundational)
 
 ```bash
-# Tests for US1 (write first, expect to fail):
-Task: "T058 Contract test IChatService in tests/AgentDesktop.Contracts.Tests/ChatServiceContractTests.cs"
-Task: "T059 Integration test SqliteChatRepository in tests/AgentDesktop.Infrastructure.Tests/Persistence/SqliteChatRepositoryTests.cs"
-Task: "T060 Integration test HttpSubscriptionGate in tests/AgentDesktop.Infrastructure.Tests/Subscription/HttpSubscriptionGateTests.cs"
-Task: "T061 Headless UI test SignInView in tests/AgentDesktop.Desktop.Tests/Views/SignInViewTests.cs"
+# Domain entities — all in parallel:
+Task: "Tenant entity in src/AgentPlatform.Domain/Tenants/Tenant.cs"            # T022
+Task: "User entity in src/AgentPlatform.Domain/Tenants/User.cs"                # T023
+Task: "Role in src/AgentPlatform.Domain/Tenants/Role.cs"                       # T024
+Task: "WorkflowDef + PhaseDef in src/AgentPlatform.Domain/Modules/WorkflowDef.cs"  # T027
+Task: "WorkflowRun + PhaseRun in src/AgentPlatform.Domain/Runs/WorkflowRun.cs"     # T028
+# ...etc through T035
 
-# Adapters/views for US1 (different files, different layers):
-Task: "T062 Implement SqliteChatRepository in src/AgentDesktop.Infrastructure/Persistence/Sqlite/SqliteChatRepository.cs"
-Task: "T063 Implement SubscriptionGate in src/AgentDesktop.Application/Subscription/SubscriptionGate.cs"
-Task: "T064 Implement HttpSubscriptionGate in src/AgentDesktop.Infrastructure/Subscription/HttpSubscriptionGate.cs"
-Task: "T067 Implement SignInViewModel in src/AgentDesktop.Desktop/ViewModels/SignInViewModel.cs"
-Task: "T068 Implement SignInView.axaml in src/AgentDesktop.Desktop/Views/SignInView.axaml"
-Task: "T069 Implement ChatViewModel in src/AgentDesktop.Desktop/ViewModels/ChatViewModel.cs"
-Task: "T070 Implement ChatView.axaml in src/AgentDesktop.Desktop/Views/ChatView.axaml"
-Task: "T071 Implement ConversationListViewModel and View"
+# Application abstractions — all in parallel:
+Task: "IPolicyEngine in src/AgentPlatform.Application/Policies/IPolicyEngine.cs"   # T040
+Task: "IRunContainerDriver in src/AgentPlatform.Application/RunContainers/IRunContainerDriver.cs"  # T041
+Task: "IBridgeChannel in src/AgentPlatform.Application/Bridge/IBridgeChannel.cs"  # T042
+# ...etc
+
+# Infrastructure adapters — parallel after EF Core context (T050):
+Task: "FileEncryptedSecretStore in src/AgentPlatform.Infrastructure/Secrets/FileEncryptedSecretStore.cs"  # T052
+Task: "FileSystemModuleSource in src/AgentPlatform.Infrastructure/Manifests/FileSystemModuleSource.cs"   # T054
+Task: "PostgresAuditLog in src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresAuditLog.cs"    # T055
+```
+
+## Parallel Example: User Story 2
+
+```bash
+# Tests — all in parallel:
+Task: "WebSocket chat I/O contract test in tests/AgentPlatform.Api.Tests/Hubs/PhaseSessionHubTests.cs"  # T094
+Task: "File-tree event stream test in tests/AgentPlatform.Api.Tests/Hubs/FileTreeStreamTests.cs"         # T095
+
+# Web components — all in parallel:
+Task: "Inbox page in web/src/pages/Inbox.tsx"                                                            # T111
+Task: "Phase view in web/src/pages/Phase.tsx"                                                            # T112
+Task: "ChatPane component in web/src/components/ChatPane.tsx"                                            # T113
+Task: "FileTree component in web/src/components/FileTree.tsx"                                            # T114
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (US1 + US3 — both P1)
+### Recommended MVP slice (early-access shippable)
 
-1. **Phase 1 Setup** — solution, projects, CI, tooling.
-2. **Phase 2 Foundational** — domain, interfaces, fakes, schema.
-3. **Phase 3 US1** — sign-in + chat + history (the "smallest end-to-end slice").
-4. **Phase 4 US3** — confirmation gate (required before any module can run safely).
-5. **STOP and validate**: SC-001, SC-002, SC-003, SC-004, SC-006 measurable; demo-able to stakeholders.
+The product is not viable with US1 alone (admin can start a run but no one can do anything). The minimum viable shippable slice is **US1 + US2 + US4**:
 
-### Incremental Delivery
+1. Complete Phase 1: Setup.
+2. Complete Phase 2: Foundational. (CRITICAL — blocks everything.)
+3. Complete Phase 3: US1 (start runs, route to inbox).
+4. Complete Phase 4: US2 (open phase, chat, file tree).
+5. Complete Phase 6: US4 (dangerous-action confirmations — non-negotiable for safety).
+6. **STOP and VALIDATE**: a single agency, single role, can run a workflow end-to-end with safety. Single-role agencies (rare but real) can use it.
+7. Add Phase 5: US3 (multi-role hand-offs) — this unlocks the agency vision and is the priority follow-up.
+8. Add Phase 7: US5 (catalogue) — convenience.
+9. Polish (Phase 8) ongoing throughout.
 
-1. MVP slice (above) → demo.
-2. **Phase 5 US2** — bundled `df-client-launchpad` + three scenarios → demo `onboard-client` against fake runtime.
-3. **Phase 6 US4** — module catalogue + direct skill run → demo.
-4. **Phase 7 Polish** — real `ProcessRuntimeManager`, packaging, perf gates → release `v0.1.0`.
+### Incremental delivery
 
-### Parallel Team Strategy
+1. Foundation ready → infrastructure visible.
+2. + US1 → admins can sign in and queue runs (internal demo only).
+3. + US2 → first usable end-to-end flow against a single role.
+4. + US4 → safe to expose to early-access agencies.
+5. + US3 → full multi-role agency value prop.
+6. + US5 → discovery surface.
 
-- One developer drives Phase 1 + Phase 2 to a green test suite.
-- Then split:
-  - Dev A: US1 (Phase 3).
-  - Dev B: US3 (Phase 4).
-- Once US3 lands:
-  - Dev A: US2 (Phase 5).
-  - Dev B: US4 (Phase 6).
-- Reconverge for Phase 7 polish.
+### Parallel team strategy
+
+With multiple developers, after Foundational (Phase 2) is green:
+
+- **Developer A**: US1 → US3 (run lifecycle, hand-offs).
+- **Developer B**: US2 (per-phase session, bridge, container driver) — builds against fakes initially.
+- **Developer C**: US4 (policy/confirmation flow) — builds against US2's fakes.
+- **Developer D**: web client (parallelised across stories via mocked API).
+
+Stories complete and integrate independently. Polish tasks (Phase 8) are picked up opportunistically, with T148 (benchmarks) and T149–T150 (E2E) gating each shippable slice.
 
 ---
 
 ## Notes
 
-- Every `[P]` task targets a distinct file; serial tasks share a file or depend on a prior task's output.
-- Constitution gates apply to every PR — coverage, perf, a11y, security. T114–T117 wire those gates into CI; until they're in place, run them locally before opening PRs.
-- The `df-client-launchpad` module ships as a Git submodule under `modules/df-client-launchpad/source/`. The first task that touches it on a fresh checkout is the bundled-content test (T088); developers must run `git submodule update --init --recursive` before that test will pass.
-- T111 (`ProcessRuntimeManager`) is in Polish on purpose: SC-007 requires the full automated suite to pass *without* the real runtime, so US1–US4 must be implementable against `FakeRuntimeManager` only.
-- Stop at any **Checkpoint** to validate the corresponding story independently.
+- `[P]` = different files, no dependency on incomplete tasks.
+- `[Story]` label maps tasks to user stories for traceability.
+- Tests MUST be written and red before implementation per Constitution II.
+- The launchpad is bundled as a Git submodule; do not modify launchpad source from this repo — open PRs against `github.com/DigitalFoxAgency/df-client-launchpad` instead.
+- Stale supporting artefacts (`research.md`, `data-model.md`, `quickstart.md`, `contracts/`) are refreshed by **T161** in Phase 8; until then, treat `plan.md` + `spec.md` as the only authoritative inputs.
+- Branch protection on `desktop` branch (preserved snapshot of the desktop MVP) is set out-of-band by the project owner.

@@ -1,121 +1,98 @@
-# Implementation Plan: Desktop AI Agent Platform (MVP)
+# Implementation Plan: Agency Workflow Platform (MVP)
 
-**Branch**: `001-agent-platform-mvp` | **Date**: 2026-04-26 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-agent-platform-mvp/spec.md`
+**Branch**: `001-agent-platform-mvp` | **Date**: 2026-04-26 (rewritten 2026-04-28 for the web/server pivot) | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/001-agent-platform-mvp/spec.md`. The desktop-MVP is preserved on the `desktop` branch and is no longer the target.
 
 ## Summary
 
-Build a cross-platform desktop AI agent application that lets a
-subscriber sign in, supply their own model API token, and hold a live
-chat conversation backed by a versioned module / scenario system and a
-mandatory policy engine for dangerous actions. The desktop shell is
-Avalonia-on-.NET; the local agent runtime (orchestrator + sandbox) is
-managed as an out-of-process subsystem behind a runtime-manager
-abstraction so the entire app is testable without it. Persistence is
-local SQLite for chat/audit, OS secure storage for credentials, and
-file-system loaders for module/scenario manifests. An optional
-ASP.NET Core API validates subscriptions out-of-band.
+Build a multi-tenant web platform where marketing agencies run packaged AI workflows (starting with `df-client-launchpad`) end-to-end on a backend that hosts **Claude Code per run**. Agency staff with different roles pick up phases from a role-based inbox, hold a chat conversation in their browser, and watch files appear in a live read-only file tree. The platform supplies the AI under the hood (no BYOK).
+
+The platform does not re-implement orchestration. The launchpad already orchestrates itself (its `ORDER.md`, skills, `SESSION-LOG.md`). The platform is a host: it runs `claude` inside a sandboxed container per session, mounts a persistent working directory across phase hand-offs, gates dangerous actions, and routes phases by role.
+
+The first deployment target is a **single Linux VPS (2 cores / 8 GB RAM)** running Docker. Run execution sits behind a container-driver abstraction so we can move to elastic container exec (Fly Machines, Fargate) when volume demands it without rearchitecting.
 
 ## Technical Context
 
-**Language/Version**: C# 12 on .NET 9 (LTS-track) for all projects.
-**Primary Dependencies**:
-- UI: Avalonia 11.x (cross-platform XAML), CommunityToolkit.Mvvm.
-- Persistence: Microsoft.Data.Sqlite + Dapper (lightweight,
-  non-EF — see research.md).
-- Secure storage: pluggable `ISecretStore` with platform adapters
-  (DPAPI on Windows, Keychain on macOS, libsecret on Linux,
-  encrypted-file fallback).
-- Manifests: System.Text.Json for `module.json`, JSON Schema
-  validation via NJsonSchema. (No scenario YAML — operations are
-  declared inside `module.json`; see research.md R5/R18.)
-- Process / IPC: `System.Diagnostics.Process` + JSON-RPC over
-  stdio for runtime communication; MCP integrations via the
-  ModelContextProtocol .NET SDK.
-- API (optional project): ASP.NET Core Minimal APIs.
-- Testing: xUnit, FluentAssertions, NSubstitute,
-  Avalonia.Headless for UI tests, Verify for snapshot tests.
+**Language/Version**: C# 12 on .NET 9 (LTS-track) for the server; TypeScript + React for the web client.
+
+**Primary dependencies**:
+
+- **API**: ASP.NET Core Minimal APIs + WebSocket. Auth via ASP.NET Core Identity (email + password; external providers via OIDC deferred).
+- **Persistence**: Microsoft.EntityFrameworkCore + Npgsql for Postgres (chat-transcript-free; SaaS plumbing only). No SQLite.
+- **Secrets**: pluggable `ISecretStore` with a file-based KMS-encrypted vault for MVP; pluggable for HashiCorp Vault / cloud secret manager later.
+- **Manifests**: System.Text.Json for `module.json`; JSON Schema validation via NJsonSchema.
+- **Container exec**: pluggable `IRunContainerDriver`; the MVP driver talks to the local Docker Engine (via `Docker.DotNet` or HTTP to `unix:///var/run/docker.sock`).
+- **Bridge**: a small .NET process inside each run container that wraps the `claude` CLI (interactive PTY or stream-JSON — decided at prototype time) and exposes a WebSocket back to the API for chat I/O, confirmation prompts, and file-system events.
+- **GitHub**: Octokit.net configured for **GitHub App** installation tokens (per-tenant, short-lived).
+- **Anthropic**: server-side platform key only; prompt caching enabled. (Agencies do **not** supply their own keys.)
+- **Web client**: TypeScript + React + Vite + Tailwind. State via TanStack Query. WebSocket via native `WebSocket` API.
+- **Testing**: xUnit, FluentAssertions, NSubstitute, Verify, Testcontainers (real Postgres in integration tests), Playwright for E2E.
+
 **Storage**:
-- Local SQLite database at the OS-appropriate per-user data
-  directory for conversations, messages, policy decisions, and audit.
-- File-system root `<userData>/modules/` for module manifests
-  (each module declares its own operations inside `module.json`);
-  bundled defaults shipped with the installer. No separate
-  `scenarios/` location — see research.md R5/R18.
-- OS secure credential store for the model API token and
-  subscription session.
-**Testing**: xUnit unit + integration suites per project, plus a
-contract-test project that exercises every published service
-interface against in-memory and real adapters.
-**Target Platform**: Windows 10+ (x64, arm64), macOS 12+ (x64,
-arm64), Linux (x64, glibc-based desktop distros). Single .NET 9
-codebase; AOT not required for MVP.
-**Project Type**: Desktop application + supporting class libraries;
-optional ASP.NET Core service for subscription validation.
-**Performance Goals**: Bound by the constitution — see Constitution
-Check below. Concretely: cold start to interactive ≤2.0 s on the
-reference machine; first agent token streamed within 2 s of send for
-95% of messages on broadband (SC-002); UI thread never blocks >50 ms
-per frame.
 
-**Reference machine** (used by every constitution Principle IV
-budget and by SC-006): Apple M2 Pro / 16 GB / SSD on macOS 14 for
-the macOS leg; Intel i5-1240P / 16 GB / NVMe on Windows 11 for the
-Windows leg; GitHub Actions `ubuntu-latest` runner for the Linux
-leg. Benchmarks publish per-leg numbers; gates fire on >10%
-regression vs the per-leg baseline rather than against a single
-golden machine.
+- **Postgres** (single DB): tenants, users, roles, subscriptions, modules, workflow runs, phase runs, inbox items, confirmation requests, audit log, usage ledger, vault references. **No chat transcripts.**
+- **Per-run persistent volume** on the host filesystem at `/var/lib/agency/runs/<runId>/`. Holds the launchpad working directory across phase hand-offs. Backed up on run completion.
+- **Module sources** under `modules/` (the launchpad as a Git submodule, baked into the run-container image).
+- **Vault**: file-based encrypted store for MVP, mounted read-only into the API service.
+
+**Testing**: xUnit unit + integration suites per project; a contract-test project that exercises every published service interface against in-memory and real adapters; Playwright E2E driven by a docker-compose harness.
+
+**Target platform**:
+
+- **Server**: Linux x64, Ubuntu 22.04+, Docker Engine 24+. Single-VPS deployment (2 cores / 8 GB RAM, +4–8 GB swap).
+- **Web client**: modern Chromium, Firefox, Safari (desktop primary; mobile read-only acceptable at MVP).
+
+**Project type**: Multi-project .NET solution (Domain → Application → Infrastructure → Api + Bridge) plus a separate web client (TypeScript + React).
+
+**Performance goals**:
+
+- First-token latency: 95% of chat messages begin streaming within **2 s** of send on broadband.
+- File-tree update latency: file changes appear in the web UI within **2 s**.
+- Phase hand-off propagation: next assignee's inbox updated within **5 s** of phase completion.
+- Concurrent capacity on the reference VPS: **3 idle runs sustained**, **2 concurrent build-class steps** without OOM (build-step semaphore enforced).
+
+**Reference machine**: Ubuntu 22.04 VPS, 2 cores, 8 GB RAM, NVMe, gigabit. Performance gates fire on >10 % regression vs the per-leg baseline.
+
 **Constraints**:
-- Domain layer MUST NOT reference Avalonia, SQLite, OpenClaw,
-  NemoClaw, Stripe, or any file-system / network API.
-- UI layer MUST NOT reference Infrastructure directly; it talks
-  only to Application services.
-- Dangerous actions (delete files, git push, install packages,
-  shell commands) require explicit per-occurrence confirmation.
-- Full automated test suite MUST run green without the real
-  OpenClaw / NemoClaw runtime installed (FR-019, SC-007).
-**Scale/Scope**:
-- Single-user-per-OS-account desktop app.
-- ~5 .NET projects + 2 test projects at MVP.
-- 1 bundled module (`df-client-launchpad`, sourced as a Git
-  submodule). The module declares 3 operations the platform
-  delegates to (`onboard-client`, `launch-ads`, `monthly-report`);
-  there are no platform-side scenarios.
-- Local SQLite expected to stay below 100 MB for typical use.
 
-**Terminology** (worth pinning even at MVP scale to avoid
-ambiguity in PR review):
-- **Module** — the **product** concept: a versioned package of
-  AI capabilities loaded via `module.json` (e.g.
-  `df-client-launchpad`). User-facing.
-- The MVP uses a layered architecture (no architectural
-  "subsystems" yet); a future modular-monolith migration is
-  documented in `docs/architecture/subsystems-future.md` and
-  recorded as a deferred decision in `research.md` R16. When
-  that migration happens, the architectural unit will be called
-  a **Subsystem** to avoid colliding with the product term
-  "Module".
+- Domain layer MUST NOT reference Postgres, Docker, GitHub, Anthropic, or any I/O API.
+- Application layer MUST NOT reference Infrastructure directly; it talks only to its own abstractions.
+- Web client MUST NOT call Postgres or vault directly; everything flows through the API.
+- The platform MUST NOT replicate the launchpad's pipeline. Phase semantics live inside `module.json`; phase execution lives inside the launchpad's skills.
+- Run containers MUST be tenant-scoped; no cross-tenant container or volume reuse.
+- Concurrent build-class steps MUST be capped at **2 host-wide** via a semaphore in the API.
+- Dangerous actions (delete files, git push, install packages, shell commands) MUST require explicit per-occurrence confirmation surfaced in the web UI.
+
+**Scale/Scope**:
+
+- Multi-tenant SaaS deployed to a single VPS at MVP.
+- ~6 .NET projects + 6 test projects + 1 web client.
+- 1 bundled module (`df-client-launchpad`, Git submodule).
+- ≤5 concurrent runs at MVP volume.
+- Postgres expected to stay below ~1 GB for MVP-scale agencies.
+
+**Terminology**:
+
+- **Module** — an agency-installable, versioned product (e.g. `df-client-launchpad`). User-facing.
+- **Workflow** — a graph of phases declared inside a module (e.g. `onboard-client`).
+- **Phase** — a single assignable unit inside a workflow. Declares its required role and the underlying skill the launchpad will run.
+- **Run** — a live execution of a workflow for a tenant.
+- **Session** — one user's interaction with Claude Code for one phase. Short-lived; fresh `claude` process. Cross-phase state carries via the persistent working directory.
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-The project constitution (`.specify/memory/constitution.md`, v1.0.0)
-defines four non-negotiable principles. This plan addresses each:
+The project constitution (`.specify/memory/constitution.md`, v1.0.0) defines four non-negotiable principles. The pivoted plan addresses each:
 
 | Principle | How this plan satisfies it |
 |-----------|---------------------------|
-| **I. Code Quality** | Solution enforces `TreatWarningsAsErrors=true`, nullable enabled, Roslyn analyzers + `.editorconfig` shipped at repo root. PR template requires reviewer sign-off; complexity cap enforced by analyzer. Public service interfaces (`IChatService`, `IModuleRegistry`, `IScenarioRunner`, `IPolicyEngine`, `IRuntimeManager`, `ISecretStore`) carry XML doc comments mirrored into `contracts/`. |
-| **II. Testing Standards** | TDD from day one: every service interface has a contract-test fixture before its first adapter ships. Coverage gate in CI: ≥90% for `Domain` and `Application`, ≥80% for `Infrastructure`/`Desktop`, **100% branch coverage** for every module that handles user data, IPC boundaries, or filesystem mutations — concretely: `DefaultPolicyEngine`, `SqliteChatRepository`, `SqliteAuditLog`, `ProcessRuntimeManager`, `FakeRuntimeManager` (its programmable surface), `FileSystemModuleSource`, `FileSystemScenarioSource`, `SessionLogReader`, `EncryptedFileSecretStore`, `WindowsDpapiSecretStore`, `MacKeychainSecretStore`, `LinuxSecretStore`. Integration tests use real SQLite (file-backed temp DB) and `FakeRuntimeManager`; mocks only for the model provider HTTP boundary, paired with one contract test against the real provider behind a `RequiresLiveModel` trait. |
-| **III. UX Consistency** | Single Avalonia design system (`AgentDesktop.Desktop/Theme/`) with tokens for color, spacing, typography. All copy externalised to `.resx` (English-only at MVP, but localisation-ready). Every UI surface tested against axe-core-equivalent (Avalonia.Headless + a11y assertions). Confirmation prompt is one shared component reused for every dangerous action so wording and affordances stay identical. |
-| **IV. Performance** | Budgets declared up front (see Technical Context). Benchmark project `AgentDesktop.Bench` runs in CI on every PR with BenchmarkDotNet for runtime-manager startup, scenario step latency, and chat message round-trip; CI fails on >10% regression vs. baseline. Long-running work (runtime install, scenario execution, model streaming) runs on background tasks; UI thread asserts no synchronous I/O via a debug-only watchdog. |
+| **I. Code Quality** | Solution enforces `TreatWarningsAsErrors=true`, nullable enabled, Roslyn analyzers + `.editorconfig` shipped at repo root. Public service interfaces (`IRunContainerDriver`, `IBridgeChannel`, `IPolicyEngine`, `IModuleRegistry`, `ISubscriptionGate`, `ISecretStore`, `IAuditLog`, `IUsageMeter`) carry XML doc comments mirrored into `contracts/`. Web client enforces `tsc --strict`, ESLint, Prettier, no implicit `any`. |
+| **II. Testing Standards** | TDD: every service interface has a contract-test fixture before its first adapter. Coverage gate in CI: ≥90 % for `Domain` and `Application`, ≥80 % for `Infrastructure`/`Api`/`Bridge`, **100 % branch coverage** on every module that handles user data, IPC boundaries, or filesystem mutations: `DefaultPolicyEngine`, `PostgresChatRepository` (and other Postgres adapters), `DockerRunContainerDriver`, `FakeRunContainerDriver`, `BridgeChannel`, `FileSystemModuleSource`, `FileEncryptedSecretStore`, `WorkflowRunService`, `PhaseAssignmentService`, `UsageMeter`, `SubscriptionGate`. Integration tests use real Postgres via Testcontainers and `FakeRunContainerDriver`; mocks only at the Anthropic and GitHub HTTP boundaries, paired with one contract test against the real API behind a `RequiresLiveExternal` trait. E2E via Playwright + docker-compose covers the chat / file-tree / confirmation / hand-off loop. |
+| **III. UX Consistency** | Single design system (`web/src/design/`) with tokens for color, spacing, typography. All copy externalised (i18n-ready; English-only at MVP). Every UI surface tested with Playwright + axe-core (a11y assertions). Confirmation prompt is one shared component reused for every dangerous action so wording and affordances stay identical. |
+| **IV. Performance** | Budgets declared up front (see Technical Context). Benchmark project `AgentPlatform.Bench` runs in CI on every PR with BenchmarkDotNet for run-container startup, bridge round-trip, and phase-handoff propagation. CI fails on >10 % regression vs baseline. Long-running work runs on background tasks; the API thread asserts no synchronous I/O via a debug-only watchdog. The build-step semaphore prevents host saturation. |
 
-**Gate result**: PASS. No violations require Complexity Tracking
-entries.
-
-**Re-check after Phase 1**: PASS — design choices in `data-model.md`
-and `contracts/` preserve the layering rules and the runtime-test
-abstraction; no constitutional drift introduced.
+**Gate result**: PASS. No violations require Complexity Tracking entries.
 
 ## Project Structure
 
@@ -124,156 +101,168 @@ abstraction; no constitutional drift introduced.
 ```text
 specs/001-agent-platform-mvp/
 ├── plan.md              # This file
-├── research.md          # Phase 0 output
-├── data-model.md        # Phase 1 output
-├── quickstart.md        # Phase 1 output
-├── contracts/           # Phase 1 output (service interface contracts + manifest schemas)
-│   ├── IChatService.md
-│   ├── IModuleRegistry.md
-│   ├── IScenarioRunner.md
-│   ├── IPolicyEngine.md
-│   ├── IRuntimeManager.md
-│   ├── ISecretStore.md
-│   ├── module.schema.json
-│   └── scenario.schema.json
+├── spec.md              # Pivoted spec
+├── research.md          # Phase 0 output (STALE — desktop-flavoured; needs refresh)
+├── data-model.md        # Phase 1 output (STALE — desktop-flavoured; needs refresh)
+├── quickstart.md        # Phase 1 output (STALE — desktop-flavoured; needs refresh)
+├── contracts/           # Service interface contracts + manifest schemas (STALE — needs refresh)
 ├── checklists/
-│   └── requirements.md  # Spec-quality checklist (already created)
-└── tasks.md             # Phase 2 output (NOT created here — /speckit-tasks)
+│   └── requirements.md  # Spec-quality checklist
+└── tasks.md             # Phase 2 output (STALE — regenerate via /speckit-tasks against the new plan)
 ```
 
-### Source Code (repository root)
+> The `research.md`, `data-model.md`, `quickstart.md`, and `contracts/` artefacts are **stale** as of the pivot and refer to the desktop-MVP architecture. They need refreshing as a follow-up. They are not blocking the implementation re-start; the new `plan.md` and `spec.md` are sufficient input.
+
+### Source code (repository root)
 
 ```text
-AgentDesktop.sln
+AgentPlatform.sln
 
 src/
-├── AgentDesktop.Domain/            # Pure domain models. No external deps.
-│   ├── Chat/                       # Conversation, Message, MessageAuthor
-│   ├── Modules/                    # Module, Skill, ModuleManifest, SkillPolicy
-│   ├── Scenarios/                  # Scenario, ScenarioStep, ScenarioStatus
-│   ├── Policies/                   # ActionClassification, PolicyDecision, DangerousAction
-│   └── Runtime/                    # RuntimeStatus, RuntimeKind (enum-only)
+├── AgentPlatform.Domain/             # Pure domain. No external deps.
+│   ├── Tenants/                      # Tenant, User, Role, UserRole
+│   ├── Modules/                      # Module, ModuleVersion, WorkflowDef, PhaseDef
+│   ├── Runs/                         # WorkflowRun, PhaseRun, Assignment
+│   ├── Policies/                     # ActionClassification, PolicyDecision, DangerousAction
+│   ├── Inbox/                        # InboxItem, ConfirmationRequest
+│   └── Audit/                        # AuditEntry, UsageLedgerEntry
 │
-├── AgentDesktop.Application/       # Use cases, orchestration. Depends on Domain only.
-│   ├── Chat/                       # IChatService + ChatService implementation
-│   ├── Modules/                    # IModuleRegistry, ModuleLoader (uses IModuleSource), IDelegationRunner
-│   ├── Policies/                   # IPolicyEngine + DefaultPolicyEngine
-│   ├── Runtime/                    # IRuntimeManager + IDelegationCallbacks (abstractions only)
-│   ├── Secrets/                    # ISecretStore (abstraction only)
-│   ├── Subscription/               # ISubscriptionGate
-│   └── Abstractions/               # IModuleSource, IClock, IConfirmationPrompt, IAuditLog
+├── AgentPlatform.Application/        # Use cases. Depends on Domain only.
+│   ├── Tenants/                      # tenant CRUD, user/role management
+│   ├── Auth/                         # ASP.NET Core Identity bridge
+│   ├── Modules/                      # IModuleRegistry, ModuleLoader
+│   ├── Runs/                         # IWorkflowRunService, IPhaseAssignmentService
+│   ├── Policies/                     # IPolicyEngine + DefaultPolicyEngine
+│   ├── Bridge/                       # IBridgeChannel (abstraction)
+│   ├── RunContainers/                # IRunContainerDriver (abstraction)
+│   ├── Subscription/                 # ISubscriptionGate
+│   ├── Usage/                        # IUsageMeter
+│   ├── Secrets/                      # ISecretStore
+│   └── Abstractions/                 # IClock, IAuditLog, IInboxNotifier, IModuleSource
 │
-├── AgentDesktop.Infrastructure/    # Adapters. Depends on Application + Domain.
-│   ├── Persistence/Sqlite/         # SqliteChatRepository, SqliteAuditLog, migrations
-│   ├── Manifests/                  # FileSystemModuleSource (validates module.json including operations[])
-│   ├── Secrets/                    # WindowsDpapiSecretStore, MacKeychainSecretStore, LinuxSecretStore, EncryptedFileSecretStore
-│   ├── Runtime/                    # ProcessRuntimeManager (OpenClaw + NemoClaw delegation IPC); FakeRuntimeManager lives in tests/AgentDesktop.Contracts.Tests/Fakes/, NOT here
-│   ├── Mcp/                        # McpClient, McpServerLauncher
-│   └── Subscription/               # HttpSubscriptionGate
+├── AgentPlatform.Infrastructure/     # Adapters. Depends on Application + Domain.
+│   ├── Persistence/Postgres/         # EF Core context, migrations, repository adapters
+│   ├── Manifests/                    # FileSystemModuleSource (validates module.json)
+│   ├── Secrets/                      # FileEncryptedSecretStore (KMS-style); pluggable
+│   ├── RunContainers/                # DockerRunContainerDriver (talks to Docker Engine)
+│   ├── Bridge/                       # WebSocketBridgeChannel (server-side)
+│   ├── GitHub/                       # GitHubAppClient (Octokit + JWT App auth)
+│   ├── Anthropic/                    # platform-key client; prompt-cache helper
+│   └── Subscription/                 # SubscriptionRecorder
 │
-├── AgentDesktop.Desktop/           # Avalonia UI. Depends on Application only.
-│   ├── App.axaml / Program.cs      # Composition root (DI: Application + Infrastructure wiring)
-│   ├── Theme/                      # Design tokens, shared controls
-│   ├── Views/                      # ChatView, ModuleCatalogView, OperationRunView, ConfirmationDialog, HumanHandoffDialog, SignInView
-│   ├── ViewModels/                 # MVVM via CommunityToolkit.Mvvm
-│   └── Resources/                  # .resx strings
+├── AgentPlatform.Api/                # ASP.NET Core API + WebSocket.
+│   ├── Program.cs                    # Composition root (DI: Application + Infrastructure wiring)
+│   ├── Endpoints/                    # Tenants, Auth, Modules, Runs, Phases, Inbox, Confirmations
+│   ├── Hubs/                         # WebSocket endpoints (chat, file-tree, confirmation routing)
+│   └── Middleware/                   # Tenant scoping, audit
 │
-└── AgentDesktop.Api/               # Optional ASP.NET Core. Subscription validation. Depends on Domain.
-    ├── Program.cs
-    └── Endpoints/
+└── AgentPlatform.Bridge/             # Process that runs INSIDE each run container.
+    ├── Program.cs                    # Wraps the `claude` CLI; exposes WebSocket to the API.
+    ├── ClaudeWrapper/                # PTY / stream-JSON adapter
+    ├── FileWatcher/                  # Working-dir watcher; debounced events
+    └── PolicyBridge/                 # Translates Claude tool-use intents into ConfirmationRequest
 
-modules/                            # Bundled modules
+web/                                  # TypeScript + React + Vite + Tailwind
+├── src/
+│   ├── pages/                        # Sign-in, agency dashboard, run starter, inbox, phase view, admin
+│   ├── components/                   # ChatPane, FileTree, ConfirmationDialog, InboxList
+│   ├── design/                       # Tokens, shared components
+│   ├── api/                          # API client + WebSocket helpers
+│   └── i18n/                         # English strings
+└── e2e/                              # Playwright specs
+
+modules/
 └── df-client-launchpad/
-    ├── module.json                 # Manifest authored in this repo (parent-tracked)
-    └── source/                     # Git submodule: github.com/DigitalFoxAgency/df-client-launchpad@refactor
-        └── ...                     # Launchpad files; SKILL.md paths resolved relative to the module root, e.g. source/template/.claude/skills/init/SKILL.md
-
-# NOTE: there is no platform-side scenarios/ directory. Operations
-# are declared inside each module's module.json under operations[].
-# See research.md R5 and R18 for the architectural rationale (modules
-# own their orchestration; the platform delegates whole operations).
+    ├── module.json                   # Manifest (workflows declared; phases map skills to roles)
+    └── source/                       # Git submodule (unchanged from desktop MVP)
 
 tests/
-├── AgentDesktop.Domain.Tests/
-├── AgentDesktop.Application.Tests/
-├── AgentDesktop.Infrastructure.Tests/
-├── AgentDesktop.Desktop.Tests/         # Avalonia.Headless
-├── AgentDesktop.Contracts.Tests/       # Contract tests for every service interface
-└── AgentDesktop.Bench/                 # BenchmarkDotNet
+├── AgentPlatform.Domain.Tests/
+├── AgentPlatform.Application.Tests/
+├── AgentPlatform.Infrastructure.Tests/    # Real Postgres via Testcontainers
+├── AgentPlatform.Api.Tests/
+├── AgentPlatform.Bridge.Tests/
+├── AgentPlatform.Contracts.Tests/         # Contract tests for every service interface
+└── AgentPlatform.Bench/                   # BenchmarkDotNet
 ```
 
-**Structure Decision**: Clean Architecture with five layered .NET
-projects (Domain → Application → Infrastructure / Desktop / Api). The
-boundary rules are enforced at the project-reference level
-(`Domain.csproj` references nothing; `Application.csproj` references
-only `Domain`; `Infrastructure.csproj` references `Application` +
-`Domain`; `Desktop.csproj` references `Application` only — the DI
-composition root in `Desktop` is the *only* place that knows about
-`Infrastructure`, so the UI never gains a transitive coupling to
-SQLite or runtime details). This layout maps 1:1 to the architecture
-constraints in the feature description and to the constitution's
-code-quality + testability principles.
-
-A migration to a **modular monolith** (one project per bounded
-context with `Contracts/` boundaries enforced by analyzer) was
-considered and **deferred to post-MVP** (research.md R16). The
-fully-designed migration target is captured in
-`docs/architecture/subsystems-future.md` for the day it becomes
-warranted.
+**Structure decision**: Clean Architecture, four backend layers (Domain → Application → Infrastructure → Api / Bridge) plus a separate web client. Layering is enforced at the project-reference level. The `Bridge` is its own project so it can be packaged as a small Docker image layer alongside the launchpad and `claude`.
 
 ## MVP Module: `df-client-launchpad`
 
-The MVP bundles exactly **one** module: `df-client-launchpad`,
-sourced from `github.com/DigitalFoxAgency/df-client-launchpad`
-(`refactor` branch) and pinned via Git submodule under
-`modules/df-client-launchpad/`. The submodule is the single source
-of truth for skill behaviour; this repo authors a thin
-`modules/df-client-launchpad/module.json` (next to the submodule
-checkout) that:
+The MVP bundles exactly **one** module: `df-client-launchpad`, sourced from `github.com/DigitalFoxAgency/df-client-launchpad` (`refactor` branch) and pinned via Git submodule under `modules/df-client-launchpad/`. The submodule is the single source of truth for skill behaviour; `module.json` declares **workflows** (each a graph of phases) the platform exposes.
 
-- Declares `id`, `version`, `name`, `description`.
-- Declares **3 operations** the platform delegates to:
-  - `onboard-client` — Phase 1 client onboarding (the launchpad's
-    full intake-to-deploy pipeline).
-  - `launch-ads` — Phase 2 ads kickoff.
-  - `monthly-report` — Phase 2 reporting.
-  Each operation declares its declared inputs (e.g. `onboard-client`
-  takes `niche`, `city`, `clientName`); execution is the launchpad's
-  responsibility.
-- May ALSO list internal skills under `skills[]` for introspection
-  / advanced direct invocation (US4 power-user path). The platform
-  does NOT orchestrate skills — see research.md R18.
-- Declares per-action `policies[]` so the platform's policy engine
-  knows which classes of actions the launchpad will propose
-  (delete file, git push, install package, run shell), letting
-  the engine pre-classify them as Dangerous before the launchpad
-  ever proposes one. The actual proposals come from the launchpad
-  at runtime via the delegation callback channel
-  (`IDelegationCallbacks.RequestConfirmationAsync`).
-- Surfaces "human-only" steps (Discovery call, content approval,
-  ads dashboard work) by emitting
-  `IDelegationCallbacks.RequestHumanHandoffAsync` from inside the
-  module — the platform shows the hand-off dialog and resumes the
-  module when the user marks the step done.
+### Bundled workflows
 
-### Bundled operations
+| Workflow | Phases (in order) | Purpose |
+|----------|-------------------|---------|
+| `onboard-client` | init · pre-research · keywords · brief · research · semantics · strategy · strategy-pdf · offer · architecture · design · site · integrations · seo · deploy | Phase 1 — full client onboarding from intake to live Cloudflare Pages deployment. |
+| `launch-ads` | ads | Phase 2 — ads kickoff once the site is live. |
+| `monthly-report` | reporting | Phase 2 — recurring optimisation pass and monthly client report. |
 
-| Operation | Purpose |
-|-----------|---------|
-| `onboard-client` | Phase 1 — full client onboarding from intake to live Cloudflare Pages deployment. The launchpad's internal pipeline (init → pre-research → brief → research → semantics → strategy → … → deploy) runs entirely inside the module. |
-| `launch-ads` | Phase 2 — ads kickoff once the site is live. |
-| `monthly-report` | Phase 2 — recurring optimisation pass and monthly client report. |
+### Phase ↔ role mapping (default; agency can override)
 
-Cross-module composition is intentionally not exercised at MVP
-because there is only one module. The registry, delegation runner,
-and policy engine remain generic — adding a second module
-post-MVP requires no engine changes.
+| Phase | Skill | Role | Kind |
+|-------|-------|------|------|
+| init | init | engineer | automated |
+| pre-research | pre-research | marketer | automated |
+| keywords | keywords | marketer | automated |
+| brief | brief | strategist | human |
+| research | research | marketer | automated |
+| semantics | semantics | marketer | automated |
+| strategy | strategy | strategist | automated |
+| strategy-pdf | strategy-pdf | designer | automated |
+| offer | offer | strategist | human |
+| architecture | architecture | strategist | automated |
+| design | design | designer | automated |
+| site | site | engineer | automated |
+| integrations | integrations | engineer | automated |
+| seo | seo | marketer | automated |
+| deploy | deploy | engineer | automated |
+| ads | ads | media-buyer | human |
+| reporting | reporting | media-buyer | automated |
+
+Cross-module composition is intentionally not exercised at MVP (only one module). The registry, run service, and policy engine remain generic — adding a second module post-MVP requires no engine changes.
+
+## Hosting & Operations (MVP)
+
+- **Deployment target**: a single Ubuntu 22.04+ VPS, 2 cores, 8 GB RAM, +4–8 GB swap, NVMe.
+- **Runtime stack** via `docker-compose`:
+  - `api` — ASP.NET Core API (HTTP + WebSocket).
+  - `web` — nginx serving the SPA + reverse-proxying to `api` (TLS via Let's Encrypt or Caddy).
+  - `postgres` — single-node Postgres.
+  - `vault` — file-based encrypted secret store mounted into `api` (read-only).
+  - `worker-daemon` — supervises run containers (lifecycle, build-step semaphore, log shipping).
+- **Run containers** spawned on demand by `DockerRunContainerDriver`. Image: `agentplatform/run-base` (Claude Code, Node, npm, Git, gh, deploy CLIs, the launchpad submodule, the Bridge). Resource limits per container: `--memory=2g`, `--cpus=1.0`. Build-step semaphore (max 2 concurrent across the host) enforced server-side before allowing a build-class action to start.
+- **Per-run volumes** mounted from `/var/lib/agency/runs/<runId>/` and reused across phase hand-offs. Archived to local backup on run completion.
+- **Backups**: Postgres dump nightly to local backup directory; weekly off-host copy via the agency's preferred backup tool.
+
+## Cost guardrails
+
+Because the platform supplies the Anthropic key and bundles AI cost into the agency subscription, cost discipline is mandatory:
+
+- **Token metering** per `PhaseRun` → `UsageLedgerEntry` rows: input, output, cache-read, cache-write tokens.
+- **Per-tenant monthly token budget** enforced by `ISubscriptionGate` before starting a workflow and re-checked at every automated phase.
+- **Per-run hard token cost cap**: workflow auto-pauses if exceeded; admin must raise the cap or terminate.
+- **Anthropic prompt caching enabled on every phase**. The launchpad reloads similar context (CLAUDE.md, ORDER.md, prior research summary, design tokens) at every phase — caching can drop input cost 50–80 % in this shape.
+- **Pricing tiers should map to compute envelopes** (workflows/month, automated phase minutes, token allowance), not just seats. (Pricing decisions sit outside the MVP technical scope but must not be blocked by the platform.)
+
+## Multi-tenancy posture
+
+- Strict row-level isolation via `tenant_id` on every row; query helpers enforce it at the API layer (`IRequestTenantContext`).
+- Run containers scoped to a single run; no cross-tenant container or volume reuse.
+- Vault paths namespaced by `tenant_id`.
+- One Anthropic platform key for all tenants at MVP. Per-tenant key delegation revisited if/when Anthropic offers it on terms that justify the operational cost.
+
+## Open decisions deferred to implementation
+
+- **Bridge mechanism** (PTY vs. stream-JSON vs. Claude Agent SDK) — decided at first prototype against `agentplatform/run-base`.
+- **TLS terminator** (nginx + Let's Encrypt vs. Caddy) — operational preference.
+- **Backup off-host strategy** — agency-specific.
+- **Email transactional notifications** — deferred past MVP; in-app inbox only at first.
 
 ## Complexity Tracking
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
+> Fill ONLY if Constitution Check has violations that must be justified.
 
-No violations to justify. The five-project split is the simplest layout
-that enforces the layering constraints in the spec; collapsing it would
-require runtime checks instead of compile-time guarantees and would
-violate Code Quality (Principle I).
+No violations to justify. The project layout is the simplest layered split that enforces the constraints in the spec and keeps the run-container and Anthropic boundaries swappable.
