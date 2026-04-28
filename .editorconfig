@@ -3,113 +3,40 @@ root = true
 [*]
 charset = utf-8
 end_of_line = lf
-indent_style = space
-indent_size = 4
-trim_trailing_whitespace = true
 insert_final_newline = true
+indent_style = space
+trim_trailing_whitespace = true
 
-[*.{json,yml,yaml,md,axaml,xaml,csproj,props,targets}]
+[*.{cs,csproj,sln,props,targets,json,yml,yaml,md}]
 indent_size = 2
 
-[*.{cs,vb}]
-# Sort using and Import directives with System.* appearing first
+[*.cs]
+indent_size = 4
+
+# C# style — keep tight and predictable.
+csharp_using_directive_placement = outside_namespace:warning
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:warning
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_var_for_built_in_types = false:silent
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_new_line_before_open_brace = all
 dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
 
-# this. and Me. preferences
-dotnet_style_qualification_for_field = false:warning
-dotnet_style_qualification_for_property = false:warning
-dotnet_style_qualification_for_method = false:warning
-dotnet_style_qualification_for_event = false:warning
+# Naming.
+dotnet_naming_rule.interfaces_should_be_prefixed.severity = warning
+dotnet_naming_rule.interfaces_should_be_prefixed.symbols = interfaces
+dotnet_naming_rule.interfaces_should_be_prefixed.style = i_prefix
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.i_prefix.required_prefix = I
+dotnet_naming_style.i_prefix.capitalization = pascal_case
 
-# Language keywords vs BCL types preferences
-dotnet_style_predefined_type_for_locals_parameters_members = true:warning
-dotnet_style_predefined_type_for_member_access = true:warning
+# Promote a few code-quality analyzers to errors per Constitution I.
+dotnet_diagnostic.IDE0005.severity = warning   # unused usings
+dotnet_diagnostic.CA1063.severity = warning   # IDisposable
+dotnet_diagnostic.CA2007.severity = none      # ConfigureAwait — server-side, not needed
+dotnet_diagnostic.CA1848.severity = none      # logger.Log... performance — not blocking
 
-# Modifier preferences
-dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
-dotnet_style_readonly_field = true:warning
-
-# Expression-level preferences
-dotnet_style_object_initializer = true:suggestion
-dotnet_style_collection_initializer = true:suggestion
-dotnet_style_explicit_tuple_names = true:warning
-dotnet_style_null_propagation = true:suggestion
-dotnet_style_coalesce_expression = true:suggestion
-dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
-dotnet_style_prefer_conditional_expression_over_assignment = true:silent
-dotnet_style_prefer_conditional_expression_over_return = true:silent
-
-[*.cs]
-# var preferences
-csharp_style_var_for_built_in_types = true:silent
-csharp_style_var_when_type_is_apparent = true:silent
-csharp_style_var_elsewhere = true:silent
-
-# Expression-bodied members
-csharp_style_expression_bodied_methods = when_on_single_line:silent
-csharp_style_expression_bodied_constructors = false:silent
-csharp_style_expression_bodied_operators = when_on_single_line:silent
-csharp_style_expression_bodied_properties = when_on_single_line:suggestion
-csharp_style_expression_bodied_indexers = when_on_single_line:suggestion
-csharp_style_expression_bodied_accessors = when_on_single_line:suggestion
-
-# Pattern matching
-csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
-csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
-
-# Null checks
-csharp_style_throw_expression = true:suggestion
-csharp_style_conditional_delegate_call = true:suggestion
-
-# Modifier preferences
-csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:warning
-
-# Code-block preferences
-csharp_prefer_braces = true:warning
-csharp_using_directive_placement = outside_namespace:warning
-csharp_style_namespace_declarations = file_scoped:warning
-
-# Nullable
-dotnet_diagnostic.CS8600.severity = error
-dotnet_diagnostic.CS8602.severity = error
-dotnet_diagnostic.CS8603.severity = error
-dotnet_diagnostic.CS8604.severity = error
-dotnet_diagnostic.CS8618.severity = error
-
-# IDE style rules — promote to errors so cleanup discipline is enforced
-dotnet_diagnostic.IDE0005.severity = error   # Unused using directive
-dotnet_diagnostic.IDE0011.severity = error   # Add braces
-dotnet_diagnostic.IDE0040.severity = error   # Add accessibility modifier
-dotnet_diagnostic.IDE0051.severity = error   # Unused private member
-dotnet_diagnostic.IDE0052.severity = error   # Unused private field/property assignment
-dotnet_diagnostic.IDE0059.severity = error   # Unnecessary value assignment
-dotnet_diagnostic.IDE0060.severity = error   # Unused parameter (with exclusions below)
-dotnet_diagnostic.IDE0270.severity = error   # Null check can be simplified
-dotnet_diagnostic.IDE0290.severity = silent  # Use primary constructor — stylistic; off
-dotnet_diagnostic.IDE0028.severity = suggestion # Use collection initialiser — stylistic
-dotnet_diagnostic.IDE0301.severity = suggestion # Use collection expression for empty — stylistic
-dotnet_diagnostic.IDE0044.severity = error   # Make field readonly
-
-# Disable some analyzers that are too noisy for an in-progress codebase
-dotnet_diagnostic.CA1014.severity = none   # CLSCompliant
-dotnet_diagnostic.CA1707.severity = none   # Underscores in identifiers (test names use them)
-dotnet_diagnostic.CA1031.severity = suggestion
-dotnet_diagnostic.CA1303.severity = none   # Localize literals
-dotnet_diagnostic.CA1848.severity = suggestion  # Use LoggerMessage delegates
-dotnet_diagnostic.CA2007.severity = none   # ConfigureAwait — desktop app
-dotnet_diagnostic.CA1716.severity = none   # Reserved language keywords ("Module" is intentional)
-dotnet_diagnostic.CA1720.severity = none   # Identifier contains type name (enum members like String/Integer are intentional)
-dotnet_diagnostic.CA1815.severity = suggestion  # Override Equals on value types — we're fine for record structs
-dotnet_diagnostic.CA1034.severity = suggestion  # Nested types — intentional for discriminated unions
-dotnet_diagnostic.CA2227.severity = none   # Read-only collections — we use IReadOnlyList everywhere
-dotnet_diagnostic.CA1819.severity = suggestion  # Properties shouldn't return arrays
-dotnet_diagnostic.CA1054.severity = suggestion  # URI prop should be Uri
-
-[tests/**/*.cs]
-dotnet_diagnostic.CA1707.severity = none
-dotnet_diagnostic.CA1062.severity = none
-dotnet_diagnostic.CA2007.severity = none
-dotnet_diagnostic.CA1822.severity = none
-dotnet_diagnostic.CA1861.severity = none  # Constant-array argument readability nit; tests benefit from inline arrays
-dotnet_diagnostic.IDE0060.severity = none  # Tests intentionally have unused parameters (theory data, etc)
+[{*.{ts,tsx,js,jsx,json,html,css},package.json,tsconfig*.json}]
+indent_size = 2

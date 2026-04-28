@@ -1,0 +1,15 @@
+is_global = true
+
+# Per-rule severity overrides for Roslyn analyzers. Most defaults come
+# from <AnalysisMode>Recommended</AnalysisMode> in Directory.Build.props.
+# This file is the place to lift specific rules to errors or quiet
+# noisy ones we don't want enforced project-wide.
+
+# Constitution I: code quality.
+dotnet_diagnostic.CS1591.severity = none      # missing XML doc — handled per-csproj
+dotnet_diagnostic.CA1707.severity = none      # underscores in test names
+dotnet_diagnostic.CA1062.severity = none      # null-arg checks at boundaries — nullable enabled handles it
+
+# Tighter than default.
+dotnet_diagnostic.CA1822.severity = warning   # mark members static where possible
+dotnet_diagnostic.IDE0040.severity = warning  # accessibility modifiers required
