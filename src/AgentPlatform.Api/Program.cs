@@ -2,18 +2,25 @@ using System.Text;
 using AgentPlatform.Api.Auth;
 using AgentPlatform.Api.Endpoints;
 using AgentPlatform.Api.HostedServices;
+using AgentPlatform.Api.Hubs;
 using AgentPlatform.Api.Middleware;
 using AgentPlatform.Application.Abstractions;
 using AgentPlatform.Application.Auth;
+using AgentPlatform.Application.Bridge;
 using AgentPlatform.Application.Common;
 using AgentPlatform.Application.Modules;
+using AgentPlatform.Application.RunContainers;
 using AgentPlatform.Application.Runs;
+using AgentPlatform.Application.Secrets;
 using AgentPlatform.Application.Subscription;
 using AgentPlatform.Application.Tenants;
 using AgentPlatform.Application.Usage;
+using AgentPlatform.Infrastructure.Bridge;
 using AgentPlatform.Infrastructure.Inbox;
 using AgentPlatform.Infrastructure.Manifests;
 using AgentPlatform.Infrastructure.Persistence.Postgres;
+using AgentPlatform.Infrastructure.RunContainers;
+using AgentPlatform.Infrastructure.Secrets;
 using AgentPlatform.Infrastructure.Subscription;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +77,40 @@ builder.Services.AddScoped<PhaseAssignmentService>();
 builder.Services.AddScoped<WorkflowRunService>();
 builder.Services.AddScoped<IAuthBackend, IdentityAuthBackend>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IPhaseRunRepository, PostgresPhaseRunRepository>();
+
+builder.Services.Configure<PhaseSessionOptions>(builder.Configuration.GetSection("AgentPlatform:PhaseSession"));
+
+builder.Services.AddSingleton(sp =>
+    new RunVolumeOptions
+    {
+        RunsRoot = builder.Configuration["AgentPlatform:Runs:Root"] ?? "/var/lib/agency/runs",
+        ArchiveRoot = builder.Configuration["AgentPlatform:Runs:ArchiveRoot"] ?? "/var/lib/agency/archive",
+    });
+builder.Services.AddSingleton<RunVolumeManager>();
+builder.Services.AddSingleton(sp => new DockerDriverOptions
+{
+    DockerEndpoint = builder.Configuration["AgentPlatform:Docker:Endpoint"]
+        ?? (OperatingSystem.IsWindows() ? "npipe://./pipe/docker_engine" : "unix:///var/run/docker.sock"),
+    NetworkMode = builder.Configuration["AgentPlatform:Docker:NetworkMode"] ?? "bridge",
+    RunAsUser = builder.Configuration["AgentPlatform:Docker:RunAsUser"],
+});
+builder.Services.AddSingleton<IRunContainerDriver, DockerRunContainerDriver>();
+builder.Services.AddSingleton<BridgeConnectionRegistry>();
+builder.Services.AddSingleton<IBridgeChannelFactory>(sp => sp.GetRequiredService<BridgeConnectionRegistry>());
+builder.Services.AddSingleton<ISecretStore>(sp =>
+{
+    var keyEnv = builder.Configuration["AgentPlatform:Vault:KeyBase64"]
+        ?? Environment.GetEnvironmentVariable("AGP_VAULT_KEY_BASE64")
+        ?? Convert.ToBase64String(new byte[32]);
+    var dir = builder.Configuration["AgentPlatform:Vault:Directory"] ?? "/var/lib/agency/vault";
+    return new FileEncryptedSecretStore(new FileEncryptedSecretStoreOptions
+    {
+        VaultDirectory = dir,
+        MasterKeyBase64 = keyEnv,
+    });
+});
+builder.Services.AddSingleton<IPhaseSessionService, PhaseSessionService>();
 
 builder.Services.AddHostedService<DatabaseMigrator>();
 builder.Services.AddHostedService<ModuleRegistrySeeder>();
@@ -80,6 +121,7 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 var app = builder.Build();
 
 app.UseCors();
+app.UseWebSockets();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenantScope();
@@ -91,6 +133,9 @@ app.MapTenantEndpoints();
 app.MapModuleEndpoints();
 app.MapRunEndpoints();
 app.MapInboxEndpoints();
+app.MapPhaseEndpoints();
+app.MapBridgeHub();
+app.MapPhaseSessionHub();
 
 app.Run();
 

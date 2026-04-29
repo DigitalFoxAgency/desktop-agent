@@ -152,3 +152,57 @@ export const startRun = (payload: StartRunPayload) =>
     method: 'POST',
     body: JSON.stringify(payload),
   });
+
+export interface InboxItem {
+  id: string;
+  phaseRunId: string;
+  kind: string;
+  title: string;
+  subtitle: string | null;
+  createdAt: string;
+}
+
+export const listInbox = () => api<InboxItem[]>('/api/inbox');
+
+export interface OpenPhaseResponse {
+  phaseRunId: string;
+  workflowRunId: string;
+  containerId: string;
+  startedAt: string;
+}
+
+export const openPhase = (phaseRunId: string) =>
+  api<OpenPhaseResponse>(`/api/phases/${phaseRunId}/open`, { method: 'POST' });
+
+export const closePhase = (phaseRunId: string) =>
+  api<void>(`/api/phases/${phaseRunId}/close`, { method: 'POST' });
+
+export interface FileEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  size: number;
+  modifiedAt: string | null;
+}
+
+export const listFiles = (phaseRunId: string, path = '') =>
+  api<FileEntry[]>(`/api/phases/${phaseRunId}/files${path ? `?path=${encodeURIComponent(path)}` : ''}`);
+
+export interface FileContent {
+  path: string;
+  size: number;
+  content: string;
+}
+
+export const getFile = (phaseRunId: string, path: string) =>
+  api<FileContent>(`/api/phases/${phaseRunId}/files/content?path=${encodeURIComponent(path)}`);
+
+export function getToken(): string | null {
+  return localStorage.getItem('agp.token');
+}
+
+export function phaseSocketUrl(phaseRunId: string): string {
+  const token = getToken();
+  const base = (import.meta.env.VITE_API_BASE ?? '').replace(/^http/, 'ws') || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+  return `${base}/ws/phase/${phaseRunId}?token=${encodeURIComponent(token ?? '')}`;
+}

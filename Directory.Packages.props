@@ -43,6 +43,7 @@
 
   <ItemGroup Label="Containers / Testcontainers">
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.1.0" />
+    <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

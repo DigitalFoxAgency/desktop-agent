@@ -20,6 +20,7 @@ export default function Dashboard() {
       <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Agency dashboard</h1>
         <div className="flex gap-3">
+          <Link to="/inbox" className="text-sm underline">Inbox</Link>
           <Link to="/runs/new" className="rounded bg-blue-600 px-3 py-2 text-white text-sm">
             Start a workflow
           </Link>

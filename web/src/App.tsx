@@ -4,6 +4,8 @@ import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import StartRun from './pages/StartRun';
+import Inbox from './pages/Inbox';
+import Phase from './pages/Phase';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const session = getSession();
@@ -29,6 +31,22 @@ export default function App() {
         element={
           <Protected>
             <StartRun />
+          </Protected>
+        }
+      />
+      <Route
+        path="/inbox"
+        element={
+          <Protected>
+            <Inbox />
+          </Protected>
+        }
+      />
+      <Route
+        path="/phase/:phaseRunId"
+        element={
+          <Protected>
+            <Phase />
           </Protected>
         }
       />
