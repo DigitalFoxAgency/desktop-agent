@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1
+# AgentPlatform.Api — ASP.NET Core API + WebSocket service.
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Restore first (cache layer).
+COPY AgentPlatform.sln Directory.Build.props Directory.Packages.props ./
+COPY src/AgentPlatform.Domain/*.csproj         src/AgentPlatform.Domain/
+COPY src/AgentPlatform.Application/*.csproj    src/AgentPlatform.Application/
+COPY src/AgentPlatform.Infrastructure/*.csproj src/AgentPlatform.Infrastructure/
+COPY src/AgentPlatform.Api/*.csproj            src/AgentPlatform.Api/
+COPY src/AgentPlatform.Bridge/*.csproj         src/AgentPlatform.Bridge/
+COPY tests/AgentPlatform.Domain.Tests/*.csproj         tests/AgentPlatform.Domain.Tests/
+COPY tests/AgentPlatform.Application.Tests/*.csproj    tests/AgentPlatform.Application.Tests/
+COPY tests/AgentPlatform.Infrastructure.Tests/*.csproj tests/AgentPlatform.Infrastructure.Tests/
+COPY tests/AgentPlatform.Api.Tests/*.csproj            tests/AgentPlatform.Api.Tests/
+COPY tests/AgentPlatform.Bridge.Tests/*.csproj         tests/AgentPlatform.Bridge.Tests/
+COPY tests/AgentPlatform.Contracts.Tests/*.csproj      tests/AgentPlatform.Contracts.Tests/
+COPY tests/AgentPlatform.Bench/*.csproj                tests/AgentPlatform.Bench/
+RUN dotnet restore src/AgentPlatform.Api/AgentPlatform.Api.csproj
+
+# Build + publish.
+COPY src/ src/
+RUN dotnet publish src/AgentPlatform.Api/AgentPlatform.Api.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false
+
+# Runtime image.
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish ./
+EXPOSE 5000
+ENTRYPOINT ["dotnet", "AgentPlatform.Api.dll"]

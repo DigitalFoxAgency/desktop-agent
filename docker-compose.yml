@@ -1,0 +1,63 @@
+# Agent Platform — local dev / single-VPS deployment stack.
+#
+# Usage:
+#   docker compose up           # bring stack up
+#   docker compose up -d        # detached
+#   docker compose down -v      # stop + remove volumes (destroys DB!)
+#
+# Phase 1 scaffold: services declared, but only `postgres` is wired
+# end-to-end at this point. The api/web/run-base images and worker
+# daemon get fleshed out as Phase 2+ tasks land.
+
+name: agentplatform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agentplatform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentplatform_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-agentplatform}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:5000"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-agentplatform};Username=${POSTGRES_USER:-agentplatform};Password=${POSTGRES_PASSWORD:-agentplatform_dev}"
+      Vault__Path: "/var/lib/agentplatform/vault.enc"
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - vault-data:/var/lib/agentplatform
+      - run-volumes:/var/lib/agentplatform/runs
+      - /var/run/docker.sock:/var/run/docker.sock     # so DockerRunContainerDriver can spawn run containers
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
+  vault-data:
+  run-volumes:

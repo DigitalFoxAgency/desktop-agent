@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.vite/
+.eslintcache
+
+# Playwright
+playwright-report/
+test-results/
+
+# Vitest
+coverage/
+
+# Editor
+.idea/
+.vscode/
+*.log

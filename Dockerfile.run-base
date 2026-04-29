@@ -1,0 +1,72 @@
+# syntax=docker/dockerfile:1
+# agentplatform/run-base — image used as the per-run sandbox container.
+# Every workflow run launches an instance of this image with the run's
+# persistent volume mounted at /workspace and agency credentials injected
+# via env. The Bridge process inside wraps the `claude` CLI and proxies
+# chat I/O + file events back to the API over WebSocket.
+#
+# Phase 1: scaffold only — installs the toolchain and the Bridge binary.
+# Phase 2 (T060-T063, T101) wires the real Bridge.
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS bridge-build
+WORKDIR /src
+COPY AgentPlatform.sln Directory.Build.props Directory.Packages.props ./
+COPY src/AgentPlatform.Domain/*.csproj      src/AgentPlatform.Domain/
+COPY src/AgentPlatform.Application/*.csproj src/AgentPlatform.Application/
+COPY src/AgentPlatform.Bridge/*.csproj      src/AgentPlatform.Bridge/
+RUN dotnet restore src/AgentPlatform.Bridge/AgentPlatform.Bridge.csproj
+COPY src/ src/
+RUN dotnet publish src/AgentPlatform.Bridge/AgentPlatform.Bridge.csproj \
+    -c Release \
+    -o /bridge \
+    --no-restore \
+    -r linux-x64 \
+    --self-contained false
+
+FROM ubuntu:22.04 AS runtime
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl gnupg git \
+        # .NET 9 runtime for the Bridge
+        wget \
+        # Build toolchain that the launchpad's automated steps need
+        nodejs npm \
+        python3 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# .NET 9 runtime (used by the Bridge).
+RUN wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/ms.deb \
+    && dpkg -i /tmp/ms.deb \
+    && rm /tmp/ms.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends dotnet-runtime-9.0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# GitHub CLI (for `gh` calls inside the launchpad).
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+        | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+        > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Cloudflare Wrangler + Claude Code CLI (npm-installed globally).
+RUN npm install -g wrangler@latest @anthropic-ai/claude-code@latest
+
+# Bridge binary.
+COPY --from=bridge-build /bridge /opt/bridge
+
+# Bundled module (the launchpad submodule is mounted read-only or baked in).
+# Phase 1 leaves this as a placeholder dir; Phase 2 wires the actual mount.
+RUN mkdir -p /opt/modules
+
+# Per-run working directory mount-point.
+RUN mkdir -p /workspace
+WORKDIR /workspace
+
+# Non-root user for the actual run.
+RUN useradd --create-home --shell /bin/bash runner
+USER runner
+
+ENTRYPOINT ["dotnet", "/opt/bridge/AgentPlatform.Bridge.dll"]
