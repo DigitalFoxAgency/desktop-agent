@@ -10,7 +10,7 @@
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS bridge-build
 WORKDIR /src
-COPY AgentPlatform.sln Directory.Build.props Directory.Packages.props ./
+COPY AgentPlatform.sln Directory.Build.props Directory.Packages.props .globalconfig .editorconfig ./
 COPY src/AgentPlatform.Domain/*.csproj      src/AgentPlatform.Domain/
 COPY src/AgentPlatform.Application/*.csproj src/AgentPlatform.Application/
 COPY src/AgentPlatform.Bridge/*.csproj      src/AgentPlatform.Bridge/
@@ -19,27 +19,18 @@ COPY src/ src/
 RUN dotnet publish src/AgentPlatform.Bridge/AgentPlatform.Bridge.csproj \
     -c Release \
     -o /bridge \
-    --no-restore \
-    -r linux-x64 \
     --self-contained false
 
-FROM ubuntu:22.04 AS runtime
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS runtime
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl gnupg git \
-        # .NET 9 runtime for the Bridge
-        wget \
-        # Build toolchain that the launchpad's automated steps need
-        nodejs npm \
+        ca-certificates curl gnupg git wget \
         python3 python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# .NET 9 runtime (used by the Bridge).
-RUN wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/ms.deb \
-    && dpkg -i /tmp/ms.deb \
-    && rm /tmp/ms.deb \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends dotnet-runtime-9.0 \
+# Node.js 20 (NodeSource feed; multi-arch). The launchpad's automated steps run npm/pnpm.
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI (for `gh` calls inside the launchpad).
