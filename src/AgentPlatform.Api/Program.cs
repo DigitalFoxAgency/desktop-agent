@@ -88,6 +88,7 @@ builder.Services.AddSingleton(sp =>
         ArchiveRoot = builder.Configuration["AgentPlatform:Runs:ArchiveRoot"] ?? "/var/lib/agency/archive",
     });
 builder.Services.AddSingleton<RunVolumeManager>();
+builder.Services.AddSingleton<IWorkingDirectoryProvider, RunVolumeWorkingDirectoryProvider>();
 builder.Services.AddSingleton(sp => new DockerDriverOptions
 {
     DockerEndpoint = builder.Configuration["AgentPlatform:Docker:Endpoint"]

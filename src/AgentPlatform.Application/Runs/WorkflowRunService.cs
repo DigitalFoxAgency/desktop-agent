@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AgentPlatform.Application.Abstractions;
 using AgentPlatform.Application.Modules;
+using AgentPlatform.Application.RunContainers;
 using AgentPlatform.Application.Subscription;
 using AgentPlatform.Domain.Audit;
 using AgentPlatform.Domain.Runs;
@@ -15,6 +16,7 @@ public sealed class WorkflowRunService
     private readonly PhaseAssignmentService _assignments;
     private readonly IAuditLog _audit;
     private readonly IInboxNotifier _notifier;
+    private readonly IWorkingDirectoryProvider _workingDir;
     private readonly IClock _clock;
 
     public WorkflowRunService(
@@ -24,6 +26,7 @@ public sealed class WorkflowRunService
         PhaseAssignmentService assignments,
         IAuditLog audit,
         IInboxNotifier notifier,
+        IWorkingDirectoryProvider workingDir,
         IClock clock)
     {
         _modules = modules;
@@ -32,6 +35,7 @@ public sealed class WorkflowRunService
         _assignments = assignments;
         _audit = audit;
         _notifier = notifier;
+        _workingDir = workingDir;
         _clock = clock;
     }
 
@@ -57,9 +61,10 @@ public sealed class WorkflowRunService
             return StartRunResult.Failure("Invalid inputs: " + string.Join("; ", inputErrors));
         }
 
+        var runId = Guid.NewGuid();
         var run = new WorkflowRun
         {
-            Id = Guid.NewGuid(),
+            Id = runId,
             TenantId = request.TenantId,
             WorkflowDefId = workflow.Id,
             ModuleId = request.ModuleId,
@@ -68,7 +73,7 @@ public sealed class WorkflowRunService
             StartedAt = _clock.UtcNow,
             Status = RunStatus.Running,
             InputsJson = JsonSerializer.Serialize(request.Inputs),
-            WorkingDirPath = $"/var/lib/agency/runs/{request.TenantId:N}/{Guid.NewGuid():N}",
+            WorkingDirPath = _workingDir.Resolve(request.TenantId, runId),
         };
 
         var firstPhaseDef = workflow.Phases.OrderBy(p => p.Order).First();
