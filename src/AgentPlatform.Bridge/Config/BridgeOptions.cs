@@ -22,4 +22,8 @@ public sealed class BridgeOptions
 
     /// <summary>Path to the claude binary inside the run image.</summary>
     public string ClaudeBinary { get; set; } = "claude";
+
+    /// <summary>When true, the Bridge swaps the real claude wrapper for a scripted mock — useful for plumbing smoke tests without an Anthropic key.</summary>
+    public bool Mock { get; set; }
 }
+

@@ -25,12 +25,22 @@ builder.Services.Configure<BridgeOptions>(o =>
     o.BridgeToken = cfg["BRIDGE_TOKEN"] ?? o.BridgeToken;
     o.Skill = cfg["SKILL"] ?? o.Skill;
     o.ClaudeBinary = cfg["CLAUDE_BINARY"] ?? o.ClaudeBinary;
+    o.Mock = cfg["MOCK"] is { } m && (m == "1" || m.Equals("true", StringComparison.OrdinalIgnoreCase));
 });
 
 builder.Services.AddLogging(b => b.AddSimpleConsole(o => o.SingleLine = true));
 builder.Services.AddSingleton<StreamJsonOptions>(sp =>
     new StreamJsonOptions { ClaudeBinary = sp.GetRequiredService<IOptions<BridgeOptions>>().Value.ClaudeBinary });
-builder.Services.AddSingleton<IClaudeWrapper, StreamJsonClaudeWrapper>();
+
+var mock = (builder.Configuration["MOCK"] is { } mockCfg) && (mockCfg == "1" || mockCfg.Equals("true", StringComparison.OrdinalIgnoreCase));
+if (mock)
+{
+    builder.Services.AddSingleton<IClaudeWrapper, MockClaudeWrapper>();
+}
+else
+{
+    builder.Services.AddSingleton<IClaudeWrapper, StreamJsonClaudeWrapper>();
+}
 builder.Services.AddHostedService<AgentPlatform.Bridge.BridgeRuntime>();
 
 using var host = builder.Build();

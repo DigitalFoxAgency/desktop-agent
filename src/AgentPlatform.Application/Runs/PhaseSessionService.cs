@@ -257,6 +257,10 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
             ["ANTHROPIC_API_KEY"] = _opts.AnthropicApiKey ?? string.Empty,
             ["ANTHROPIC_PROMPT_CACHE"] = "1",
         };
+        if (_opts.MockBridge)
+        {
+            env["AGP_MOCK"] = "1";
+        }
 
         var keys = await secrets.ListKeysAsync(tenantId, cancellationToken).ConfigureAwait(false);
         foreach (var key in keys)
@@ -301,4 +305,7 @@ public sealed class PhaseSessionOptions
     public double CpuLimit { get; set; } = 1.0;
     public TimeSpan BridgeConnectTimeout { get; set; } = TimeSpan.FromSeconds(20);
     public long PerRunCostCapCents { get; set; } = 500;
+
+    /// <summary>When true, the API instructs the Bridge to run in mock mode (scripted responses, no Anthropic call). Useful for plumbing smoke tests.</summary>
+    public bool MockBridge { get; set; }
 }
