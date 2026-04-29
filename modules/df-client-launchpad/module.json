@@ -1,263 +1,64 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "df-client-launchpad",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Digital Fox Client Launchpad",
-  "description": "End-to-end Digital Fox performance-marketing client onboarding pipeline: from intake and Discovery through site build, integrations, deployment, ad launch, and monthly reporting. Self-orchestrating: the platform delegates whole operations and the module runs its internal pipeline (see source/template/.claude/skills/ORDER.md).",
+  "description": "Multi-role agency workflow: client onboarding from intake through Cloudflare Pages deployment, then ads launch and monthly reporting. Each phase runs the matching skill from source/template/.claude/skills/<id>/SKILL.md inside the assigned role-holder's session.",
   "dependencies": [],
-  "operations": [
+  "workflows": [
     {
       "id": "onboard-client",
-      "name": "Onboard Client (Phase 1)",
-      "description": "Full Digital Fox client onboarding from intake through live Cloudflare Pages deployment. The module runs its internal pipeline (init → pre-research → brief → research → semantics → strategy → strategy-pdf → offer → architecture → design → site → integrations → seo → deploy) end-to-end, asking the user for confirmation on dangerous actions and pausing on human-only steps (Discovery brief, offer approval).",
+      "name": "Onboard Client",
+      "description": "Full client onboarding pipeline: intake → research → strategy → design → site → integrations → SEO → deploy.",
       "inputs": [
         { "name": "niche", "kind": "string", "required": true, "description": "Client niche / vertical." },
         { "name": "city", "kind": "string", "required": true, "description": "Client city." },
         { "name": "clientName", "kind": "string", "required": true, "description": "Client display name." }
+      ],
+      "phases": [
+        { "id": "init",          "name": "Init client project",        "role": "engineer",    "skill": "init",          "kind": "verification", "verificationKey": "init: verified" },
+        { "id": "pre-research",  "name": "Pre-research",               "role": "marketer",    "skill": "pre-research",  "kind": "standard",     "verificationKey": "pre-research: verified" },
+        { "id": "brief",         "name": "Discovery brief",            "role": "strategist",  "skill": "brief",         "kind": "manual",       "verificationKey": "brief: verified" },
+        { "id": "research",      "name": "Deep research",              "role": "strategist",  "skill": "research",      "kind": "standard",     "verificationKey": "research: verified" },
+        { "id": "semantics",     "name": "Semantics + budget",         "role": "strategist",  "skill": "semantics",     "kind": "standard",     "verificationKey": "semantics: verified" },
+        { "id": "strategy",      "name": "Strategy",                   "role": "strategist",  "skill": "strategy",      "kind": "standard",     "verificationKey": "strategy: verified" },
+        { "id": "strategy-pdf",  "name": "Strategy PDF",               "role": "strategist",  "skill": "strategy-pdf",  "kind": "standard",     "verificationKey": "strategy-pdf: verified" },
+        { "id": "offer",         "name": "Offer",                      "role": "strategist",  "skill": "offer",         "kind": "manual",       "verificationKey": "offer: verified" },
+        { "id": "architecture",  "name": "Site architecture",          "role": "strategist",  "skill": "architecture",  "kind": "standard",     "verificationKey": "architecture: verified" },
+        { "id": "design",        "name": "Design system",              "role": "designer",    "skill": "design",        "kind": "standard",     "verificationKey": "design: verified" },
+        { "id": "site",          "name": "Build Astro site",           "role": "engineer",    "skill": "site",          "kind": "standard",     "verificationKey": "site: verified" },
+        { "id": "integrations",  "name": "Integrations",               "role": "engineer",    "skill": "integrations",  "kind": "standard",     "verificationKey": "integrations: verified" },
+        { "id": "seo",           "name": "SEO audit",                  "role": "engineer",    "skill": "seo",           "kind": "verification", "verificationKey": "seo: verified" },
+        { "id": "deploy",        "name": "Deploy to Cloudflare Pages", "role": "engineer",    "skill": "deploy",        "kind": "standard",     "verificationKey": "deploy: verified" }
       ]
     },
     {
       "id": "launch-ads",
-      "name": "Launch Ads (Phase 2)",
-      "description": "Phase 2 ads kickoff once the site is live. Human-led step (GUI dashboard work); the module guides and the user executes.",
+      "name": "Launch Ads",
+      "description": "Configure and launch Google Ads / Meta Ads once the site is live.",
       "inputs": [
         { "name": "clientPath", "kind": "path", "required": true, "description": "Absolute path to the client folder created by onboard-client." }
+      ],
+      "phases": [
+        { "id": "ads", "name": "Launch ads", "role": "media-buyer", "skill": "ads", "kind": "manual", "verificationKey": "ads: verified" }
       ]
     },
     {
       "id": "monthly-report",
-      "name": "Monthly Report (Phase 2)",
+      "name": "Monthly Report",
       "description": "Recurring optimisation pass and monthly client report.",
       "inputs": [
         { "name": "clientPath", "kind": "path", "required": true, "description": "Absolute path to the client folder." }
+      ],
+      "phases": [
+        { "id": "reporting", "name": "Monthly reporting", "role": "media-buyer", "skill": "reporting", "kind": "standard", "verificationKey": "reporting: verified" }
       ]
     }
   ],
-  "skills": [
-    {
-      "id": "init",
-      "name": "Init client project",
-      "description": "Bootstrap an isolated client workspace: folder, git repo, GitHub private repo, base config.ts.",
-      "classification": "dangerous",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/init/SKILL.md",
-      "verificationKey": "init: verified",
-      "inputs": [
-        { "name": "niche", "kind": "string", "required": true, "description": "Client niche / vertical." },
-        { "name": "city", "kind": "string", "required": true, "description": "Client city." },
-        { "name": "clientName", "kind": "string", "required": true, "description": "Client display name." }
-      ],
-      "outputs": [
-        { "name": "clientSlug", "kind": "string", "required": true, "description": "Slug used as the client folder and repo name." },
-        { "name": "clientPath", "kind": "path", "required": true, "description": "Absolute path to the new client folder." }
-      ]
-    },
-    {
-      "id": "pre-research",
-      "name": "Pre-research",
-      "description": "Auto-collect site and market data before the Discovery call.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/pre-research/SKILL.md",
-      "verificationKey": "pre-research: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "keywords",
-      "name": "Keywords (optional)",
-      "description": "Enrich pre-research with a Google Keyword Planner export. Optional in ORDER.md.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/keywords/SKILL.md",
-      "verificationKey": "keywords: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true },
-        { "name": "kwpExport", "kind": "path", "required": false, "description": "Path to the Google Keyword Planner CSV export." }
-      ]
-    },
-    {
-      "id": "brief",
-      "name": "Discovery brief",
-      "description": "Convert the Discovery call into discovery_brief.md + client-brief.md and seed config.ts.",
-      "classification": "dangerous",
-      "kind": "human",
-      "sourcePath": "source/template/.claude/skills/brief/SKILL.md",
-      "verificationKey": "brief: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "research",
-      "name": "Deep research (P01–P12)",
-      "description": "Perplexity Deep Research run producing 02-research/results/.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/research/SKILL.md",
-      "verificationKey": "research: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "semantics",
-      "name": "Semantics + ad copy + budget forecast",
-      "description": "Build the keyword/ad-copy/budget plan that drives site architecture downstream.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/semantics/SKILL.md",
-      "verificationKey": "semantics: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "strategy",
-      "name": "Strategy",
-      "description": "Positioning, ICP, SWOT, funnel.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/strategy/SKILL.md",
-      "verificationKey": "strategy: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "strategy-pdf",
-      "name": "Strategy PDF",
-      "description": "Render the strategy as a client-facing PDF.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/strategy-pdf/SKILL.md",
-      "verificationKey": "strategy-pdf: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ],
-      "outputs": [
-        { "name": "pdfPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "offer",
-      "name": "Offer",
-      "description": "Irresistible offer: value proposition + risk reversal.",
-      "classification": "safe",
-      "kind": "human",
-      "sourcePath": "source/template/.claude/skills/offer/SKILL.md",
-      "verificationKey": "offer: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "architecture",
-      "name": "Site architecture",
-      "description": "Page map (H1 / meta / CTA) derived from semantics.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/architecture/SKILL.md",
-      "verificationKey": "architecture: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "design",
-      "name": "Design system",
-      "description": "Stitch brief, design tokens, base components.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/design/SKILL.md",
-      "verificationKey": "design: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "site",
-      "name": "Build Astro site",
-      "description": "Assemble the Astro 5 + Tailwind v4 site under 07-site/.",
-      "classification": "dangerous",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/site/SKILL.md",
-      "verificationKey": "site: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "integrations",
-      "name": "Integrations",
-      "description": "Resend, Telegram, SendPulse, GTM, GA4, Pixel, Consent Mode v2, Drive.",
-      "classification": "dangerous",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/integrations/SKILL.md",
-      "verificationKey": "integrations: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "seo",
-      "name": "SEO audit",
-      "description": "meta · canonical · JSON-LD · sitemap · performance.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/seo/SKILL.md",
-      "verificationKey": "seo: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "deploy",
-      "name": "Deploy to Cloudflare Pages",
-      "description": "Cloudflare Pages project: domain, SSL, production build.",
-      "classification": "dangerous",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/deploy/SKILL.md",
-      "verificationKey": "deploy: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ],
-      "outputs": [
-        { "name": "siteUrl", "kind": "url", "required": true }
-      ]
-    },
-    {
-      "id": "ads",
-      "name": "Launch ads",
-      "description": "Configure and launch Google Ads / Meta Ads campaigns.",
-      "classification": "dangerous",
-      "kind": "human",
-      "sourcePath": "source/template/.claude/skills/ads/SKILL.md",
-      "verificationKey": "ads: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    },
-    {
-      "id": "reporting",
-      "name": "Monthly reporting",
-      "description": "Optimisation pass and monthly client report.",
-      "classification": "safe",
-      "kind": "automated",
-      "sourcePath": "source/template/.claude/skills/reporting/SKILL.md",
-      "verificationKey": "reporting: verified",
-      "inputs": [
-        { "name": "clientPath", "kind": "path", "required": true }
-      ]
-    }
-  ],
-  "mcpServers": [],
-  "prompts": [],
   "policies": [
-    { "actionClass": "DeleteFile", "classification": "dangerous", "reason": "Launchpad rewrites client files during site build / strategy generation; deletions are real." },
-    { "actionClass": "GitPush", "classification": "dangerous", "reason": "Launchpad pushes generated code to client GitHub repos." },
+    { "actionClass": "DeleteFile",     "classification": "dangerous", "reason": "Launchpad rewrites client files during site build / strategy generation; deletions are real." },
+    { "actionClass": "GitPush",        "classification": "dangerous", "reason": "Launchpad pushes generated code to client GitHub repos." },
     { "actionClass": "InstallPackage", "classification": "dangerous", "reason": "Launchpad installs npm dependencies during site build." },
-    { "actionClass": "RunShell", "classification": "dangerous", "reason": "Launchpad runs shell commands (git, npm, deploy CLI) inside the client folder." }
+    { "actionClass": "RunShell",       "classification": "dangerous", "reason": "Launchpad runs shell commands (git, npm, deploy CLI) inside the client folder." }
   ]
 }

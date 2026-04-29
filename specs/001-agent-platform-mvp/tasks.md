@@ -41,27 +41,27 @@ Operations:
 
 **Purpose**: Project skeletons, tooling, and the Docker stack scaffold.
 
-- [ ] T001 Initialize `AgentPlatform.sln` at repo root and add empty solution folders `src/`, `tests/`
-- [ ] T002 [P] Create `src/AgentPlatform.Domain/AgentPlatform.Domain.csproj` (class library, .NET 9, no external refs)
-- [ ] T003 [P] Create `src/AgentPlatform.Application/AgentPlatform.Application.csproj` referencing only Domain
-- [ ] T004 [P] Create `src/AgentPlatform.Infrastructure/AgentPlatform.Infrastructure.csproj` referencing Application + Domain
-- [ ] T005 [P] Create `src/AgentPlatform.Api/AgentPlatform.Api.csproj` (ASP.NET Core, .NET 9) referencing Application + Infrastructure
-- [ ] T006 [P] Create `src/AgentPlatform.Bridge/AgentPlatform.Bridge.csproj` (console, .NET 9) referencing Application
-- [ ] T007 [P] Create test projects: `tests/AgentPlatform.Domain.Tests/`, `tests/AgentPlatform.Application.Tests/`, `tests/AgentPlatform.Infrastructure.Tests/`, `tests/AgentPlatform.Api.Tests/`, `tests/AgentPlatform.Bridge.Tests/`, `tests/AgentPlatform.Contracts.Tests/`, `tests/AgentPlatform.Bench/` with xUnit + FluentAssertions + NSubstitute + Verify
-- [ ] T008 Wire all projects into `AgentPlatform.sln`; verify project-reference layering matches `plan.md` §Project Structure
-- [ ] T009 [P] Add `.editorconfig` at repo root with C# style + analyzer severity rules
-- [ ] T010 [P] Add `Directory.Build.props` at repo root with `TreatWarningsAsErrors=true`, `Nullable=enable`, `LangVersion=latest`, code-coverage MSBuild props
-- [ ] T011 [P] Add `.globalconfig` at repo root with Roslyn analyzer severities (per Constitution I)
-- [ ] T012 [P] Initialize web client: `web/` with Vite + React 18 + TypeScript + Tailwind + TanStack Query (`web/package.json`, `web/vite.config.ts`, `web/tsconfig.json`, `web/tailwind.config.ts`)
-- [ ] T013 [P] Configure ESLint + Prettier + `tsc --strict` in `web/` (`web/.eslintrc.cjs`, `web/.prettierrc`)
-- [ ] T014 [P] Add Playwright config and base fixtures in `web/e2e/` (`web/playwright.config.ts`, `web/e2e/fixtures.ts`)
-- [ ] T015 Create `docker-compose.yml` at repo root with services: `api`, `web`, `postgres`, `vault`, `worker-daemon`
-- [ ] T016 [P] Create `Dockerfile.api` (multi-stage .NET 9 build → runtime)
-- [ ] T017 [P] Create `Dockerfile.web` (Node build → nginx serving SPA + reverse-proxy to api)
-- [ ] T018 [P] Create `Dockerfile.run-base` for `agentplatform/run-base`: Ubuntu 22.04 + Node 20 + npm + Git + GitHub CLI + Cloudflare Wrangler + the launchpad submodule + the Bridge binary; install Claude Code CLI
-- [ ] T019 Verify the launchpad Git submodule is present at `modules/df-client-launchpad/source/`; if missing, run `git submodule update --init --recursive`
-- [ ] T020 [P] Add repo-level `README.md` describing the agency workflow platform (high-level only; defer detailed architecture docs to T160)
-- [ ] T021 [P] Create `.github/workflows/ci.yml`: build + test on PR (matrix: ubuntu-latest), web `pnpm build` + `pnpm test`, .NET `dotnet build && dotnet test`
+- [X] T001 Initialize `AgentPlatform.sln` at repo root and add empty solution folders `src/`, `tests/`
+- [X] T002 [P] Create `src/AgentPlatform.Domain/AgentPlatform.Domain.csproj` (class library, .NET 9, no external refs)
+- [X] T003 [P] Create `src/AgentPlatform.Application/AgentPlatform.Application.csproj` referencing only Domain
+- [X] T004 [P] Create `src/AgentPlatform.Infrastructure/AgentPlatform.Infrastructure.csproj` referencing Application + Domain
+- [X] T005 [P] Create `src/AgentPlatform.Api/AgentPlatform.Api.csproj` (ASP.NET Core, .NET 9) referencing Application + Infrastructure
+- [X] T006 [P] Create `src/AgentPlatform.Bridge/AgentPlatform.Bridge.csproj` (console, .NET 9) referencing Application
+- [X] T007 [P] Create test projects: `tests/AgentPlatform.Domain.Tests/`, `tests/AgentPlatform.Application.Tests/`, `tests/AgentPlatform.Infrastructure.Tests/`, `tests/AgentPlatform.Api.Tests/`, `tests/AgentPlatform.Bridge.Tests/`, `tests/AgentPlatform.Contracts.Tests/`, `tests/AgentPlatform.Bench/` with xUnit + FluentAssertions + NSubstitute + Verify
+- [X] T008 Wire all projects into `AgentPlatform.sln`; verify project-reference layering matches `plan.md` §Project Structure
+- [X] T009 [P] Add `.editorconfig` at repo root with C# style + analyzer severity rules
+- [X] T010 [P] Add `Directory.Build.props` at repo root with `TreatWarningsAsErrors=true`, `Nullable=enable`, `LangVersion=latest`, code-coverage MSBuild props
+- [X] T011 [P] Add `.globalconfig` at repo root with Roslyn analyzer severities (per Constitution I)
+- [X] T012 [P] Initialize web client: `web/` with Vite + React 18 + TypeScript + Tailwind + TanStack Query (`web/package.json`, `web/vite.config.ts`, `web/tsconfig.json`, `web/tailwind.config.ts`)
+- [X] T013 [P] Configure ESLint + Prettier + `tsc --strict` in `web/` (`web/.eslintrc.cjs`, `web/.prettierrc`)
+- [X] T014 [P] Add Playwright config and base fixtures in `web/e2e/` (`web/playwright.config.ts`, `web/e2e/fixtures.ts`)
+- [X] T015 Create `docker-compose.yml` at repo root with services: `api`, `web`, `postgres`, `vault`, `worker-daemon`
+- [X] T016 [P] Create `Dockerfile.api` (multi-stage .NET 9 build → runtime)
+- [X] T017 [P] Create `Dockerfile.web` (Node build → nginx serving SPA + reverse-proxy to api)
+- [X] T018 [P] Create `Dockerfile.run-base` for `agentplatform/run-base`: Ubuntu 22.04 + Node 20 + npm + Git + GitHub CLI + Cloudflare Wrangler + the launchpad submodule + the Bridge binary; install Claude Code CLI
+- [X] T019 Verify the launchpad Git submodule is present at `modules/df-client-launchpad/source/`; if missing, run `git submodule update --init --recursive`
+- [X] T020 [P] Add repo-level `README.md` describing the agency workflow platform (high-level only; defer detailed architecture docs to T160)
+- [X] T021 [P] Create `.github/workflows/ci.yml`: build + test on PR (matrix: ubuntu-latest), web `pnpm build` + `pnpm test`, .NET `dotnet build && dotnet test`
 
 ---
 
@@ -73,74 +73,74 @@ Operations:
 
 ### Domain entities
 
-- [ ] T022 [P] `Tenant` entity in `src/AgentPlatform.Domain/Tenants/Tenant.cs`
-- [ ] T023 [P] `User` entity in `src/AgentPlatform.Domain/Tenants/User.cs`
-- [ ] T024 [P] `Role` (admin, marketer, strategist, designer, engineer, media-buyer) in `src/AgentPlatform.Domain/Tenants/Role.cs`
-- [ ] T025 [P] `UserRole` join entity in `src/AgentPlatform.Domain/Tenants/UserRole.cs`
-- [ ] T026 [P] `Module` + `ModuleVersion` entities in `src/AgentPlatform.Domain/Modules/Module.cs`
-- [ ] T027 [P] `WorkflowDef` + `PhaseDef` (ordered phase graph) in `src/AgentPlatform.Domain/Modules/WorkflowDef.cs`
-- [ ] T028 [P] `WorkflowRun` + `PhaseRun` + `RunStatus` enum in `src/AgentPlatform.Domain/Runs/WorkflowRun.cs`
-- [ ] T029 [P] `Assignment` entity in `src/AgentPlatform.Domain/Runs/Assignment.cs`
-- [ ] T030 [P] `InboxItem` entity in `src/AgentPlatform.Domain/Inbox/InboxItem.cs`
-- [ ] T031 [P] `ConfirmationRequest` entity + `ConfirmationDecision` value object in `src/AgentPlatform.Domain/Inbox/ConfirmationRequest.cs`
-- [ ] T032 [P] `DangerousAction`, `ActionClassification` enum, `PolicyDecision` value object in `src/AgentPlatform.Domain/Policies/`
-- [ ] T033 [P] `AuditEntry` entity in `src/AgentPlatform.Domain/Audit/AuditEntry.cs`
-- [ ] T034 [P] `UsageLedgerEntry` entity in `src/AgentPlatform.Domain/Audit/UsageLedgerEntry.cs`
-- [ ] T035 [P] `VaultSecretRef` entity in `src/AgentPlatform.Domain/Secrets/VaultSecretRef.cs`
+- [X] T022 [P] `Tenant` entity in `src/AgentPlatform.Domain/Tenants/Tenant.cs`
+- [X] T023 [P] `User` entity in `src/AgentPlatform.Domain/Tenants/User.cs`
+- [X] T024 [P] `Role` (admin, marketer, strategist, designer, engineer, media-buyer) in `src/AgentPlatform.Domain/Tenants/Role.cs`
+- [X] T025 [P] `UserRole` join entity in `src/AgentPlatform.Domain/Tenants/UserRole.cs`
+- [X] T026 [P] `Module` + `ModuleVersion` entities in `src/AgentPlatform.Domain/Modules/Module.cs`
+- [X] T027 [P] `WorkflowDef` + `PhaseDef` (ordered phase graph) in `src/AgentPlatform.Domain/Modules/WorkflowDef.cs`
+- [X] T028 [P] `WorkflowRun` + `PhaseRun` + `RunStatus` enum in `src/AgentPlatform.Domain/Runs/WorkflowRun.cs`
+- [X] T029 [P] `Assignment` entity in `src/AgentPlatform.Domain/Runs/Assignment.cs`
+- [X] T030 [P] `InboxItem` entity in `src/AgentPlatform.Domain/Inbox/InboxItem.cs`
+- [X] T031 [P] `ConfirmationRequest` entity + `ConfirmationDecision` value object in `src/AgentPlatform.Domain/Inbox/ConfirmationRequest.cs`
+- [X] T032 [P] `DangerousAction`, `ActionClassification` enum, `PolicyDecision` value object in `src/AgentPlatform.Domain/Policies/`
+- [X] T033 [P] `AuditEntry` entity in `src/AgentPlatform.Domain/Audit/AuditEntry.cs`
+- [X] T034 [P] `UsageLedgerEntry` entity in `src/AgentPlatform.Domain/Audit/UsageLedgerEntry.cs`
+- [X] T035 [P] `VaultSecretRef` entity in `src/AgentPlatform.Domain/Secrets/VaultSecretRef.cs`
 
 ### Application abstractions
 
-- [ ] T036 [P] `IClock` in `src/AgentPlatform.Application/Abstractions/IClock.cs`
-- [ ] T037 [P] `IRequestTenantContext` (resolves tenant from auth context) in `src/AgentPlatform.Application/Abstractions/IRequestTenantContext.cs`
-- [ ] T038 [P] `IModuleSource` in `src/AgentPlatform.Application/Abstractions/IModuleSource.cs`
-- [ ] T039 [P] `IModuleRegistry` in `src/AgentPlatform.Application/Modules/IModuleRegistry.cs`
-- [ ] T040 [P] `IPolicyEngine` in `src/AgentPlatform.Application/Policies/IPolicyEngine.cs`
-- [ ] T041 [P] `IRunContainerDriver` (`StartAsync`, `StopAsync`, `EnsureVolumeAsync`) in `src/AgentPlatform.Application/RunContainers/IRunContainerDriver.cs`
-- [ ] T042 [P] `IBridgeChannel` (chat I/O, confirmation, file events) in `src/AgentPlatform.Application/Bridge/IBridgeChannel.cs`
-- [ ] T043 [P] `ISubscriptionGate` in `src/AgentPlatform.Application/Subscription/ISubscriptionGate.cs`
-- [ ] T044 [P] `IUsageMeter` in `src/AgentPlatform.Application/Usage/IUsageMeter.cs`
-- [ ] T045 [P] `IAuditLog` in `src/AgentPlatform.Application/Abstractions/IAuditLog.cs`
-- [ ] T046 [P] `ISecretStore` in `src/AgentPlatform.Application/Secrets/ISecretStore.cs`
-- [ ] T047 [P] `IInboxNotifier` in `src/AgentPlatform.Application/Abstractions/IInboxNotifier.cs`
+- [X] T036 [P] `IClock` in `src/AgentPlatform.Application/Abstractions/IClock.cs`
+- [X] T037 [P] `IRequestTenantContext` (resolves tenant from auth context) in `src/AgentPlatform.Application/Abstractions/IRequestTenantContext.cs`
+- [X] T038 [P] `IModuleSource` in `src/AgentPlatform.Application/Abstractions/IModuleSource.cs`
+- [X] T039 [P] `IModuleRegistry` in `src/AgentPlatform.Application/Modules/IModuleRegistry.cs`
+- [X] T040 [P] `IPolicyEngine` in `src/AgentPlatform.Application/Policies/IPolicyEngine.cs`
+- [X] T041 [P] `IRunContainerDriver` (`StartAsync`, `StopAsync`, `EnsureVolumeAsync`) in `src/AgentPlatform.Application/RunContainers/IRunContainerDriver.cs`
+- [X] T042 [P] `IBridgeChannel` (chat I/O, confirmation, file events) in `src/AgentPlatform.Application/Bridge/IBridgeChannel.cs`
+- [X] T043 [P] `ISubscriptionGate` in `src/AgentPlatform.Application/Subscription/ISubscriptionGate.cs`
+- [X] T044 [P] `IUsageMeter` in `src/AgentPlatform.Application/Usage/IUsageMeter.cs`
+- [X] T045 [P] `IAuditLog` in `src/AgentPlatform.Application/Abstractions/IAuditLog.cs`
+- [X] T046 [P] `ISecretStore` in `src/AgentPlatform.Application/Secrets/ISecretStore.cs`
+- [X] T047 [P] `IInboxNotifier` in `src/AgentPlatform.Application/Abstractions/IInboxNotifier.cs`
 
 ### Application implementations
 
-- [ ] T048 [P] `DefaultPolicyEngine` (baseline classes: DeleteFile, GitPush, InstallPackage, RunShell + per-module manifest policies) in `src/AgentPlatform.Application/Policies/DefaultPolicyEngine.cs`
-- [ ] T049 [P] `BuildStepSemaphore` (host-wide cap = 2) in `src/AgentPlatform.Application/RunContainers/BuildStepSemaphore.cs`
+- [X] T048 [P] `DefaultPolicyEngine` (baseline classes: DeleteFile, GitPush, InstallPackage, RunShell + per-module manifest policies) in `src/AgentPlatform.Application/Policies/DefaultPolicyEngine.cs`
+- [X] T049 [P] `BuildStepSemaphore` (host-wide cap = 2) in `src/AgentPlatform.Application/RunContainers/BuildStepSemaphore.cs`
 
 ### Infrastructure (persistence + secrets + manifests)
 
-- [ ] T050 EF Core: `AgentPlatformDbContext` with all entities, value-object configuration, and a global `tenant_id` query filter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/AgentPlatformDbContext.cs`
-- [ ] T051 EF Core initial migration `0001_Initial` in `src/AgentPlatform.Infrastructure/Persistence/Postgres/Migrations/`
-- [ ] T052 [P] `FileEncryptedSecretStore` (AES-GCM, key from env / file) in `src/AgentPlatform.Infrastructure/Secrets/FileEncryptedSecretStore.cs`
-- [ ] T053 [P] `module.schema.json` (declares workflows + phases + role + skill + policies) in `src/AgentPlatform.Infrastructure/Manifests/module.schema.json`
-- [ ] T054 [P] `FileSystemModuleSource` (validates `module.json` against schema; refuses unknown schemaVersion) in `src/AgentPlatform.Infrastructure/Manifests/FileSystemModuleSource.cs`
-- [ ] T055 [P] `PostgresAuditLog` adapter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresAuditLog.cs`
-- [ ] T056 [P] `PostgresUsageMeter` adapter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresUsageMeter.cs`
-- [ ] T057 [P] Update `modules/df-client-launchpad/module.json` schema: replace flat `operations[]`/`skills[]` with `workflows[]` containing ordered `phases[]`, each phase declaring `role` + `skill` + `kind` (per `plan.md` §MVP Module table)
+- [X] T050 EF Core: `AgentPlatformDbContext` with all entities, value-object configuration, and a global `tenant_id` query filter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/AgentPlatformDbContext.cs`
+- [X] T051 EF Core initial migration `0001_Initial` in `src/AgentPlatform.Infrastructure/Persistence/Postgres/Migrations/`
+- [X] T052 [P] `FileEncryptedSecretStore` (AES-GCM, key from env / file) in `src/AgentPlatform.Infrastructure/Secrets/FileEncryptedSecretStore.cs`
+- [X] T053 [P] `module.schema.json` (declares workflows + phases + role + skill + policies) in `src/AgentPlatform.Infrastructure/Manifests/module.schema.json`
+- [X] T054 [P] `FileSystemModuleSource` (validates `module.json` against schema; refuses unknown schemaVersion) in `src/AgentPlatform.Infrastructure/Manifests/FileSystemModuleSource.cs`
+- [X] T055 [P] `PostgresAuditLog` adapter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresAuditLog.cs`
+- [X] T056 [P] `PostgresUsageMeter` adapter in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresUsageMeter.cs`
+- [X] T057 [P] Update `modules/df-client-launchpad/module.json` schema: replace flat `operations[]`/`skills[]` with `workflows[]` containing ordered `phases[]`, each phase declaring `role` + `skill` + `kind` (per `plan.md` §MVP Module table)
 
 ### Auth + tenant scoping
 
-- [ ] T058 ASP.NET Core Identity scaffolding (email + password, no external providers) wired to Postgres in `src/AgentPlatform.Api/Auth/IdentityConfig.cs`
-- [ ] T059 Tenant-scoping middleware (resolves tenant from JWT, populates `IRequestTenantContext`) in `src/AgentPlatform.Api/Middleware/TenantScopeMiddleware.cs`
+- [X] T058 ASP.NET Core Identity scaffolding (email + password, no external providers) wired to Postgres in `src/AgentPlatform.Api/Auth/IdentityConfig.cs`
+- [X] T059 Tenant-scoping middleware (resolves tenant from JWT, populates `IRequestTenantContext`) in `src/AgentPlatform.Api/Middleware/TenantScopeMiddleware.cs`
 
 ### Bridge skeleton
 
-- [ ] T060 [P] Bridge entry point + config in `src/AgentPlatform.Bridge/Program.cs`
-- [ ] T061 [P] Claude wrapper interface + stream contracts in `src/AgentPlatform.Bridge/ClaudeWrapper/IClaudeWrapper.cs`
-- [ ] T062 [P] WebSocket transport (Bridge → API) in `src/AgentPlatform.Bridge/Transport/ApiBridgeClient.cs`
-- [ ] T063 [P] File watcher (debounced, glob-filtered) in `src/AgentPlatform.Bridge/FileWatcher/WorkingDirWatcher.cs`
+- [X] T060 [P] Bridge entry point + config in `src/AgentPlatform.Bridge/Program.cs`
+- [X] T061 [P] Claude wrapper interface + stream contracts in `src/AgentPlatform.Bridge/ClaudeWrapper/IClaudeWrapper.cs`
+- [X] T062 [P] WebSocket transport (Bridge → API) in `src/AgentPlatform.Bridge/Transport/ApiBridgeClient.cs`
+- [X] T063 [P] File watcher (debounced, glob-filtered) in `src/AgentPlatform.Bridge/FileWatcher/WorkingDirWatcher.cs`
 
 ### Contract-test fakes + fixtures
 
-- [ ] T064 [P] `FakeRunContainerDriver` (in-process, programmable) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeRunContainerDriver.cs`
-- [ ] T065 [P] `FakeBridgeChannel` (deterministic chat / confirmation responses) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeBridgeChannel.cs`
-- [ ] T066 [P] `FakeClaudeWrapper` (replays a scripted skill run) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeClaudeWrapper.cs`
-- [ ] T067 Contract test fixtures for `IPolicyEngine`, `IModuleRegistry`, `ISubscriptionGate`, `IUsageMeter`, `IAuditLog`, `IRunContainerDriver`, `IBridgeChannel`, `ISecretStore` in `tests/AgentPlatform.Contracts.Tests/Fixtures/`
+- [X] T064 [P] `FakeRunContainerDriver` (in-process, programmable) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeRunContainerDriver.cs`
+- [X] T065 [P] `FakeBridgeChannel` (deterministic chat / confirmation responses) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeBridgeChannel.cs`
+- [X] T066 [P] `FakeClaudeWrapper` (replays a scripted skill run) in `tests/AgentPlatform.Contracts.Tests/Fakes/FakeClaudeWrapper.cs`
+- [X] T067 Contract test fixtures for `IPolicyEngine`, `IModuleRegistry`, `ISubscriptionGate`, `IUsageMeter`, `IAuditLog`, `IRunContainerDriver`, `IBridgeChannel`, `ISecretStore` in `tests/AgentPlatform.Contracts.Tests/Fixtures/`
 
 ### Test infrastructure
 
-- [ ] T068 Testcontainers harness (real Postgres) base class in `tests/AgentPlatform.Infrastructure.Tests/PostgresFixture.cs`
+- [X] T068 Testcontainers harness (real Postgres) base class in `tests/AgentPlatform.Infrastructure.Tests/PostgresFixture.cs`
 
 **Checkpoint**: Foundation ready — user story work can now begin in parallel.
 
