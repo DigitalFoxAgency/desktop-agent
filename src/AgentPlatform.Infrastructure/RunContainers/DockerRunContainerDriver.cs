@@ -53,15 +53,7 @@ public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
             CapDrop = new List<string> { "ALL" },
             CapAdd = new List<string> { "DAC_OVERRIDE", "FOWNER", "CHOWN" },
             ReadonlyRootfs = false,
-            Mounts = new List<Mount>
-            {
-                new()
-                {
-                    Type = "bind",
-                    Source = hostPath,
-                    Target = "/workspace",
-                },
-            },
+            Mounts = BuildMounts(hostPath, _opts),
             ExtraHosts = new List<string> { "host.docker.internal:host-gateway" },
             NetworkMode = _opts.NetworkMode,
         };
@@ -158,6 +150,30 @@ public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
     }
 
     public void Dispose() => _docker.Dispose();
+
+    private static List<Mount> BuildMounts(string workspaceHostPath, DockerDriverOptions opts)
+    {
+        var mounts = new List<Mount>
+        {
+            new()
+            {
+                Type = "bind",
+                Source = workspaceHostPath,
+                Target = "/workspace",
+            },
+        };
+        if (!string.IsNullOrWhiteSpace(opts.ModulesHostPath) && Directory.Exists(opts.ModulesHostPath))
+        {
+            mounts.Add(new Mount
+            {
+                Type = "bind",
+                Source = opts.ModulesHostPath,
+                Target = "/opt/modules",
+                ReadOnly = true,
+            });
+        }
+        return mounts;
+    }
 }
 
 public sealed class DockerDriverOptions
@@ -166,4 +182,7 @@ public sealed class DockerDriverOptions
         OperatingSystem.IsWindows() ? "npipe://./pipe/docker_engine" : "unix:///var/run/docker.sock";
     public string NetworkMode { get; set; } = "bridge";
     public string? RunAsUser { get; set; }
+
+    /// <summary>Host path to the modules root (e.g. <c>repo/modules</c>); bind-mounted read-only at <c>/opt/modules</c>.</summary>
+    public string? ModulesHostPath { get; set; }
 }

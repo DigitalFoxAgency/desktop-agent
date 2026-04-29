@@ -94,6 +94,8 @@ builder.Services.AddSingleton(sp => new DockerDriverOptions
         ?? (OperatingSystem.IsWindows() ? "npipe://./pipe/docker_engine" : "unix:///var/run/docker.sock"),
     NetworkMode = builder.Configuration["AgentPlatform:Docker:NetworkMode"] ?? "bridge",
     RunAsUser = builder.Configuration["AgentPlatform:Docker:RunAsUser"],
+    ModulesHostPath = builder.Configuration["AgentPlatform:Docker:ModulesHostPath"]
+        ?? Path.GetFullPath(modulesRoot),
 });
 builder.Services.AddSingleton<IRunContainerDriver, DockerRunContainerDriver>();
 builder.Services.AddSingleton<BridgeConnectionRegistry>();
