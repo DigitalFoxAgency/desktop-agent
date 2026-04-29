@@ -14,10 +14,14 @@
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AgentPlatform.Api\AgentPlatform.Api.csproj" />
+    <ProjectReference Include="..\..\src\AgentPlatform.Infrastructure\AgentPlatform.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

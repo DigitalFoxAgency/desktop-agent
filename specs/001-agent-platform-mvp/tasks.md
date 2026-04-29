@@ -154,34 +154,34 @@ Operations:
 
 ### Tests for User Story 1
 
-- [ ] T069 [P] [US1] Contract test for `POST /api/auth/signup` + `POST /api/auth/signin` in `tests/AgentPlatform.Api.Tests/Auth/AuthEndpointTests.cs`
-- [ ] T070 [P] [US1] Contract test for `POST /api/runs` (validates inputs, refuses on subscription expired, returns runId) in `tests/AgentPlatform.Api.Tests/Runs/StartRunTests.cs`
-- [ ] T071 [P] [US1] Contract test for `GET /api/modules` catalogue in `tests/AgentPlatform.Api.Tests/Modules/ModuleCatalogueTests.cs`
-- [ ] T072 [P] [US1] Contract test for `GET /api/inbox` (returns items scoped to tenant + user roles) in `tests/AgentPlatform.Api.Tests/Inbox/InboxEndpointTests.cs`
-- [ ] T073 [P] [US1] Integration test: signup → signin → start `onboard-client` → inbox of `engineer`-role user contains `init` item, in `tests/AgentPlatform.Api.Tests/Integration/StartWorkflowFlowTests.cs`
+- [X] T069 [P] [US1] Contract test for `POST /api/auth/signup` + `POST /api/auth/signin` in `tests/AgentPlatform.Api.Tests/Auth/AuthEndpointTests.cs`
+- [X] T070 [P] [US1] Contract test for `POST /api/runs` (validates inputs, refuses on subscription expired, returns runId) in `tests/AgentPlatform.Api.Tests/Runs/StartRunTests.cs`
+- [X] T071 [P] [US1] Contract test for `GET /api/modules` catalogue in `tests/AgentPlatform.Api.Tests/Modules/ModuleCatalogueTests.cs`
+- [X] T072 [P] [US1] Contract test for `GET /api/inbox` (returns items scoped to tenant + user roles) in `tests/AgentPlatform.Api.Tests/Inbox/InboxEndpointTests.cs`
+- [X] T073 [P] [US1] Integration test: signup → signin → start `onboard-client` → inbox of `engineer`-role user contains `init` item, in `tests/AgentPlatform.Api.Tests/Integration/StartWorkflowFlowTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T074 [P] [US1] `AuthService` (Identity wrapper: signup, signin, password change) in `src/AgentPlatform.Application/Auth/AuthService.cs`
-- [ ] T075 [P] [US1] `TenantService` (create tenant, add user, assign roles) in `src/AgentPlatform.Application/Tenants/TenantService.cs`
-- [ ] T076 [P] [US1] `PostgresTenantRepository` in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresTenantRepository.cs`
-- [ ] T077 [US1] `DefaultSubscriptionGate` (checks plan + monthly token budget; refuses if exhausted/expired) in `src/AgentPlatform.Infrastructure/Subscription/DefaultSubscriptionGate.cs`
-- [ ] T078 [US1] `ModuleRegistry` implementation (loads via `IModuleSource` at startup; refresh endpoint) in `src/AgentPlatform.Application/Modules/ModuleRegistry.cs`
-- [ ] T079 [US1] `WorkflowRunService.StartAsync` (validates inputs against `WorkflowDef`, creates `WorkflowRun` + first `PhaseRun` + `Assignment` + `InboxItem`, writes audit) in `src/AgentPlatform.Application/Runs/WorkflowRunService.cs`
-- [ ] T080 [US1] `PhaseAssignmentService` (resolves phase role → primary holder; falls back to `WaitingAssignment` if none) in `src/AgentPlatform.Application/Runs/PhaseAssignmentService.cs`
-- [ ] T081 [US1] `/api/auth/signup` + `/api/auth/signin` + `/api/auth/signout` endpoints in `src/AgentPlatform.Api/Endpoints/AuthEndpoints.cs`
-- [ ] T082 [US1] `/api/tenants/{id}/users`, `/api/tenants/{id}/roles`, role-assignment endpoints in `src/AgentPlatform.Api/Endpoints/TenantEndpoints.cs`
-- [ ] T083 [US1] `/api/modules` (list installed modules + workflows) in `src/AgentPlatform.Api/Endpoints/ModuleEndpoints.cs`
-- [ ] T084 [US1] `/api/runs` (POST start, GET list, GET by id) in `src/AgentPlatform.Api/Endpoints/RunEndpoints.cs`
-- [ ] T085 [US1] `/api/inbox` (list items for current user) in `src/AgentPlatform.Api/Endpoints/InboxEndpoints.cs`
-- [ ] T086 [US1] Audit log entries for tenant lifecycle, sign-in, run-start, role-assignment events
-- [ ] T087 [P] [US1] Web sign-in page in `web/src/pages/SignIn.tsx`
-- [ ] T088 [P] [US1] Web sign-up page (creates tenant + admin user) in `web/src/pages/SignUp.tsx`
-- [ ] T089 [P] [US1] Web agency dashboard (runs list, recent activity) in `web/src/pages/Dashboard.tsx`
-- [ ] T090 [P] [US1] Web run-starter form (pick workflow, supply inputs, submit) in `web/src/pages/StartRun.tsx`
-- [ ] T091 [P] [US1] API client wrapper (auth-aware fetch) in `web/src/api/client.ts`
-- [ ] T092 [P] [US1] Web routing + protected routes in `web/src/App.tsx`
-- [ ] T093 [US1] Module-registry seeding on API startup: load `df-client-launchpad/module.json`; refuse if `schemaVersion` unknown
+- [X] T074 [P] [US1] `AuthService` (Identity wrapper: signup, signin, password change) in `src/AgentPlatform.Application/Auth/AuthService.cs`
+- [X] T075 [P] [US1] `TenantService` (create tenant, add user, assign roles) in `src/AgentPlatform.Application/Tenants/TenantService.cs`
+- [X] T076 [P] [US1] `PostgresTenantRepository` in `src/AgentPlatform.Infrastructure/Persistence/Postgres/PostgresTenantRepository.cs`
+- [X] T077 [US1] `DefaultSubscriptionGate` (checks plan + monthly token budget; refuses if exhausted/expired) in `src/AgentPlatform.Infrastructure/Subscription/DefaultSubscriptionGate.cs`
+- [X] T078 [US1] `ModuleRegistry` implementation (loads via `IModuleSource` at startup; refresh endpoint) in `src/AgentPlatform.Application/Modules/ModuleRegistry.cs`
+- [X] T079 [US1] `WorkflowRunService.StartAsync` (validates inputs against `WorkflowDef`, creates `WorkflowRun` + first `PhaseRun` + `Assignment` + `InboxItem`, writes audit) in `src/AgentPlatform.Application/Runs/WorkflowRunService.cs`
+- [X] T080 [US1] `PhaseAssignmentService` (resolves phase role → primary holder; falls back to `WaitingAssignment` if none) in `src/AgentPlatform.Application/Runs/PhaseAssignmentService.cs`
+- [X] T081 [US1] `/api/auth/signup` + `/api/auth/signin` + `/api/auth/signout` endpoints in `src/AgentPlatform.Api/Endpoints/AuthEndpoints.cs`
+- [X] T082 [US1] `/api/tenants/{id}/users`, `/api/tenants/{id}/roles`, role-assignment endpoints in `src/AgentPlatform.Api/Endpoints/TenantEndpoints.cs`
+- [X] T083 [US1] `/api/modules` (list installed modules + workflows) in `src/AgentPlatform.Api/Endpoints/ModuleEndpoints.cs`
+- [X] T084 [US1] `/api/runs` (POST start, GET list, GET by id) in `src/AgentPlatform.Api/Endpoints/RunEndpoints.cs`
+- [X] T085 [US1] `/api/inbox` (list items for current user) in `src/AgentPlatform.Api/Endpoints/InboxEndpoints.cs`
+- [X] T086 [US1] Audit log entries for tenant lifecycle, sign-in, run-start, role-assignment events
+- [X] T087 [P] [US1] Web sign-in page in `web/src/pages/SignIn.tsx`
+- [X] T088 [P] [US1] Web sign-up page (creates tenant + admin user) in `web/src/pages/SignUp.tsx`
+- [X] T089 [P] [US1] Web agency dashboard (runs list, recent activity) in `web/src/pages/Dashboard.tsx`
+- [X] T090 [P] [US1] Web run-starter form (pick workflow, supply inputs, submit) in `web/src/pages/StartRun.tsx`
+- [X] T091 [P] [US1] API client wrapper (auth-aware fetch) in `web/src/api/client.ts`
+- [X] T092 [P] [US1] Web routing + protected routes in `web/src/App.tsx`
+- [X] T093 [US1] Module-registry seeding on API startup: load `df-client-launchpad/module.json`; refuse if `schemaVersion` unknown
 
 **Checkpoint**: Admin can sign up, sign in, start a workflow, and the first phase is queued in the assigned user's inbox. Phase opening (US2) is not yet wired.
 
