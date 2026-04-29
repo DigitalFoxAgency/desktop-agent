@@ -125,3 +125,7 @@ secrets.json
 
 # Specify ephemeral
 .specify/feature.json.bak
+
+# Local environment files
+.env.local
+.local/
