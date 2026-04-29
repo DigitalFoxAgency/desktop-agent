@@ -129,3 +129,6 @@ secrets.json
 # Local environment files
 .env.local
 .local/
+
+# Playwright MCP scratch (snapshots, console logs, screenshots)
+.playwright-mcp/

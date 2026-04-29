@@ -13,12 +13,15 @@ export default function Phase() {
   const [error, setError] = useState<string | null>(null);
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [usage, setUsage] = useState<{ input: number; output: number } | null>(null);
+  const [opened, setOpened] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const socketRef = useRef<PhaseSocket | null>(null);
   const assistantBufferRef = useRef<string>('');
 
   useEffect(() => {
     if (!phaseRunId) return;
     let cancelled = false;
+    setError(null);
     openPhase(phaseRunId)
       .then(() => {
         if (cancelled) return;
@@ -59,14 +62,17 @@ export default function Phase() {
         );
         socketRef.current = sock;
         setConnected(true);
+        setOpened(true);
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => {
+        if (!cancelled) setError(e.message);
+      });
 
     return () => {
       cancelled = true;
       socketRef.current?.close();
     };
-  }, [phaseRunId]);
+  }, [phaseRunId, retryKey]);
 
   const sendUser = useMemo(() => (text: string) => {
     if (!socketRef.current) return;
@@ -94,10 +100,29 @@ export default function Phase() {
           <button onClick={leave} className="underline">Close phase</button>
         </div>
       </header>
-      {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-2">{error}</div>}
+      {error && (
+        <div className="bg-red-50 text-red-700 text-sm px-4 py-2 flex items-center justify-between">
+          <span>Couldn't open phase session: {error}</span>
+          <button
+            onClick={() => {
+              setError(null);
+              setRetryKey((k) => k + 1);
+            }}
+            className="ml-3 underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       <main className="flex-1 grid grid-cols-[1fr_320px] gap-4 p-4 min-h-0">
         <ChatPane messages={messages} onSend={sendUser} disabled={!connected} />
-        {phaseRunId && <FileTree phaseRunId={phaseRunId} refreshSignal={refreshSignal} />}
+        {phaseRunId && opened ? (
+          <FileTree phaseRunId={phaseRunId} refreshSignal={refreshSignal} />
+        ) : (
+          <div className="border rounded h-full flex items-center justify-center text-sm text-gray-500 p-4 text-center">
+            Files will appear once the phase session is running.
+          </div>
+        )}
       </main>
     </div>
   );

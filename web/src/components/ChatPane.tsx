@@ -32,7 +32,9 @@ export default function ChatPane({ messages, onSend, disabled }: Props) {
     <div className="flex flex-col h-full border rounded">
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
-          <p className="text-sm text-gray-500">Waiting for Claude…</p>
+          <p className="text-sm text-gray-500">
+            {disabled ? 'Disconnected — start the session to chat.' : 'Waiting for Claude…'}
+          </p>
         )}
         {messages.map((m) => (
           <div key={m.id} className={m.role === 'user' ? 'text-right' : ''}>

@@ -125,6 +125,23 @@ var app = builder.Build();
 
 app.UseCors();
 app.UseWebSockets();
+
+// Browsers can't attach an Authorization header to a WebSocket open, so the
+// client passes the JWT as ?token=. Promote it to a Bearer header BEFORE the
+// auth middleware runs — JwtBearer caches its result per request, so trying
+// to re-authenticate later in the endpoint handler is too late.
+app.Use(async (ctx, next) =>
+{
+    if ((ctx.Request.Path.StartsWithSegments("/ws/phase") || ctx.Request.Path.StartsWithSegments("/ws/bridge"))
+        && !ctx.Request.Headers.ContainsKey("Authorization")
+        && ctx.Request.Query.TryGetValue("token", out var qt)
+        && !string.IsNullOrEmpty(qt))
+    {
+        ctx.Request.Headers.Authorization = $"Bearer {qt}";
+    }
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenantScope();

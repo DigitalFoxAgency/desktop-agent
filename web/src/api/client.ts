@@ -46,8 +46,9 @@ export async function api<T = unknown>(
   if (!res.ok) {
     let message = `${res.status} ${res.statusText}`;
     try {
-      const body = (await res.json()) as { error?: string };
-      if (body.error) message = body.error;
+      const body = (await res.json()) as { error?: string; detail?: string; title?: string };
+      const detail = body.error ?? body.detail ?? body.title;
+      if (detail) message = detail;
     } catch {
       // body wasn't JSON; keep status text
     }
@@ -171,8 +172,19 @@ export interface OpenPhaseResponse {
   startedAt: string;
 }
 
-export const openPhase = (phaseRunId: string) =>
-  api<OpenPhaseResponse>(`/api/phases/${phaseRunId}/open`, { method: 'POST' });
+// React StrictMode mounts effects twice in dev, which would otherwise launch two
+// concurrent /open calls for the same phase and lose the race inside Docker
+// (container name collision). Dedupe in-flight requests per phaseRunId.
+const openInFlight = new Map<string, Promise<OpenPhaseResponse>>();
+
+export const openPhase = (phaseRunId: string): Promise<OpenPhaseResponse> => {
+  const existing = openInFlight.get(phaseRunId);
+  if (existing) return existing;
+  const p = api<OpenPhaseResponse>(`/api/phases/${phaseRunId}/open`, { method: 'POST' })
+    .finally(() => openInFlight.delete(phaseRunId));
+  openInFlight.set(phaseRunId, p);
+  return p;
+};
 
 export const closePhase = (phaseRunId: string) =>
   api<void>(`/api/phases/${phaseRunId}/close`, { method: 'POST' });

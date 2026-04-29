@@ -25,6 +25,7 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
 
     private readonly ConcurrentDictionary<Guid, PhaseSessionHandle> _active = new();
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _pumps = new();
+    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _openLocks = new();
 
     public PhaseSessionService(
         IServiceScopeFactory scopes,
@@ -49,6 +50,27 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
             return OpenPhaseSessionResult.Success(existing);
         }
 
+        // Serialize concurrent OpenAsync calls for the same phase so the second
+        // caller observes the populated _active entry instead of racing the
+        // container create (which would 409 on name collision).
+        var gate = _openLocks.GetOrAdd(phaseRunId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_active.TryGetValue(phaseRunId, out existing))
+            {
+                return OpenPhaseSessionResult.Success(existing);
+            }
+            return await OpenInternalAsync(tenantId, userId, phaseRunId, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<OpenPhaseSessionResult> OpenInternalAsync(Guid tenantId, Guid userId, Guid phaseRunId, CancellationToken cancellationToken)
+    {
         await using var scope = _scopes.CreateAsyncScope();
         var phases = scope.ServiceProvider.GetRequiredService<IPhaseRunRepository>();
         var modules = scope.ServiceProvider.GetRequiredService<IModuleRegistry>();

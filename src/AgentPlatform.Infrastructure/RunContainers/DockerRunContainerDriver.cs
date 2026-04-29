@@ -102,7 +102,28 @@ public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
             _log.LogWarning(ex, "Container list failed; continuing");
         }
 
-        var created = await _docker.Containers.CreateContainerAsync(create, cancellationToken).ConfigureAwait(false);
+        CreateContainerResponse created;
+        try
+        {
+            created = await _docker.Containers.CreateContainerAsync(create, cancellationToken).ConfigureAwait(false);
+        }
+        catch (DockerApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            // A container with this name appeared between our list and create
+            // (concurrent open or a process killed mid-flight). Force-remove and
+            // retry once.
+            _log.LogWarning("Create conflicted on {Name}; force-removing and retrying", name);
+            try
+            {
+                await _docker.Containers.RemoveContainerAsync(name,
+                    new ContainerRemoveParameters { Force = true }, cancellationToken).ConfigureAwait(false);
+            }
+            catch (DockerApiException removeEx)
+            {
+                _log.LogWarning(removeEx, "Conflict-recovery remove failed for {Name}", name);
+            }
+            created = await _docker.Containers.CreateContainerAsync(create, cancellationToken).ConfigureAwait(false);
+        }
         var started = await _docker.Containers.StartContainerAsync(
             created.ID,
             new ContainerStartParameters(),
