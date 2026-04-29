@@ -279,6 +279,21 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
             ["ANTHROPIC_API_KEY"] = _opts.AnthropicApiKey ?? string.Empty,
             ["ANTHROPIC_PROMPT_CACHE"] = "1",
         };
+        // Optional: route the in-container `claude` CLI to a different
+        // Anthropic-compatible endpoint (e.g. a local claude-code-router /
+        // LiteLLM proxy in front of a local model). When set, `claude` honors
+        // ANTHROPIC_BASE_URL and the proxy handles model translation.
+        if (!string.IsNullOrWhiteSpace(_opts.AnthropicBaseUrl))
+        {
+            env["ANTHROPIC_BASE_URL"] = _opts.AnthropicBaseUrl;
+        }
+        // Tell the bridge to point claude's HOME at the bind-mounted credentials
+        // dir; both ~/.claude/ and ~/.claude.json then land in the host mount and
+        // persist across phases.
+        if (!string.IsNullOrWhiteSpace(_opts.ClaudeHomeInContainer))
+        {
+            env["AGP_CLAUDE_HOME"] = _opts.ClaudeHomeInContainer;
+        }
         if (_opts.MockBridge)
         {
             env["AGP_MOCK"] = "1";
@@ -323,6 +338,12 @@ public sealed class PhaseSessionOptions
     public string RunImage { get; set; } = "agentplatform/run-base:latest";
     public string BridgeUrl { get; set; } = "ws://host.docker.internal:5080/ws/bridge";
     public string? AnthropicApiKey { get; set; }
+
+    /// <summary>Optional Anthropic-compatible endpoint (e.g. a local claude-code-router proxy at <c>http://host.docker.internal:11434</c>) used to drive the in-container <c>claude</c> CLI against a non-Anthropic model.</summary>
+    public string? AnthropicBaseUrl { get; set; }
+
+    /// <summary>In-container path used as HOME for the claude CLI when subscription-auth credentials are bind-mounted. Defaults to <c>/home/runner/.agp-claude</c> when the bind mount is enabled.</summary>
+    public string? ClaudeHomeInContainer { get; set; } = "/home/runner/.agp-claude";
     public int MemoryMegabytes { get; set; } = 2048;
     public double CpuLimit { get; set; } = 1.0;
     public TimeSpan BridgeConnectTimeout { get; set; } = TimeSpan.FromSeconds(20);

@@ -183,6 +183,21 @@ public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
                 Target = "/workspace",
             },
         };
+        // Optional: bind in a host directory used as the in-container `claude`
+        // CLI's HOME, so it sees both ~/.claude/ and ~/.claude.json from a
+        // prior `claude login` against a Claude.ai subscription. Lets the
+        // CLI run without an Anthropic API key.
+        if (!string.IsNullOrWhiteSpace(opts.ClaudeCredentialsHostPath))
+        {
+            Directory.CreateDirectory(opts.ClaudeCredentialsHostPath);
+            mounts.Add(new Mount
+            {
+                Type = "bind",
+                Source = opts.ClaudeCredentialsHostPath,
+                Target = "/home/runner/.agp-claude",
+                ReadOnly = false,
+            });
+        }
         if (!string.IsNullOrWhiteSpace(opts.ModulesHostPath) && Directory.Exists(opts.ModulesHostPath))
         {
             mounts.Add(new Mount
@@ -206,4 +221,7 @@ public sealed class DockerDriverOptions
 
     /// <summary>Host path to the modules root (e.g. <c>repo/modules</c>); bind-mounted read-only at <c>/opt/modules</c>.</summary>
     public string? ModulesHostPath { get; set; }
+
+    /// <summary>Host directory holding pre-authenticated <c>claude</c> credentials, bind-mounted to <c>/home/runner/.claude</c> in the run container. Populate it once by running <c>claude login</c> via the helper script.</summary>
+    public string? ClaudeCredentialsHostPath { get; set; }
 }

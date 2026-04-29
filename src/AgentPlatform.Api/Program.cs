@@ -97,6 +97,7 @@ builder.Services.AddSingleton(sp => new DockerDriverOptions
     RunAsUser = builder.Configuration["AgentPlatform:Docker:RunAsUser"],
     ModulesHostPath = builder.Configuration["AgentPlatform:Docker:ModulesHostPath"]
         ?? Path.GetFullPath(modulesRoot),
+    ClaudeCredentialsHostPath = builder.Configuration["AgentPlatform:Docker:ClaudeCredentialsHostPath"],
 });
 builder.Services.AddSingleton<IRunContainerDriver, DockerRunContainerDriver>();
 builder.Services.AddSingleton<BridgeConnectionRegistry>();

@@ -33,6 +33,7 @@ public sealed class StreamJsonClaudeWrapper : IClaudeWrapper, IAsyncDisposable
             "--output-format", "stream-json",
             "--input-format", "stream-json",
             "--print",
+            "--verbose",
         };
         if (!string.IsNullOrWhiteSpace(spec.Skill))
         {
@@ -56,6 +57,13 @@ public sealed class StreamJsonClaudeWrapper : IClaudeWrapper, IAsyncDisposable
         foreach (var (k, v) in spec.Environment)
         {
             psi.Environment[k] = v;
+        }
+        // If the API supplied AGP_CLAUDE_HOME, redirect HOME for the CLI so it
+        // reads creds + .claude.json from the bind-mounted host directory.
+        var claudeHome = Environment.GetEnvironmentVariable("AGP_CLAUDE_HOME");
+        if (!string.IsNullOrWhiteSpace(claudeHome))
+        {
+            psi.Environment["HOME"] = claudeHome;
         }
 
         _process = new Process { StartInfo = psi, EnableRaisingEvents = true };
