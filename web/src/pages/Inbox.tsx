@@ -1,9 +1,19 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { listInbox } from '../api/client';
+import { connectInbox } from '../api/ws';
 
 export default function Inbox() {
-  const { data, isLoading, error } = useQuery({ queryKey: ['inbox'], queryFn: listInbox, refetchInterval: 5000 });
+  const queryClient = useQueryClient();
+  const { data, isLoading, error } = useQuery({ queryKey: ['inbox'], queryFn: listInbox, refetchInterval: 30000 });
+
+  useEffect(() => {
+    const ws = connectInbox(() => {
+      queryClient.invalidateQueries({ queryKey: ['inbox'] });
+    });
+    return () => ws.close();
+  }, [queryClient]);
 
   return (
     <div className="mx-auto max-w-3xl p-6">

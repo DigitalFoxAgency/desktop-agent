@@ -1,5 +1,6 @@
 using AgentPlatform.Application.Abstractions;
 using AgentPlatform.Application.Runs;
+using AgentPlatform.Domain.Tenants;
 
 namespace AgentPlatform.Api.Endpoints;
 
@@ -53,8 +54,29 @@ public static class RunEndpoints
             });
         });
 
+        group.MapPost("/{id:guid}/assign", async (Guid id, AssignDto body, IRequestTenantContext ctx, WorkflowRunService runs, CancellationToken ct) =>
+        {
+            if (body is null) { return Results.BadRequest(new { error = "Body required." }); }
+            if (!ctx.Roles.Contains(Role.Admin)) { return Results.Forbid(); }
+            // The run id in the route is for routing/audit; the actual operation targets a specific waiting phase.
+            var run = await runs.GetAsync(ctx.TenantId, id, ct);
+            if (run is null) { return Results.NotFound(); }
+            if (!run.Phases.Any(p => p.Id == body.PhaseRunId))
+            {
+                return Results.BadRequest(new { error = "phaseRunId does not belong to this run" });
+            }
+            var result = await runs.ReassignAsync(ctx.TenantId, ctx.UserId, body.PhaseRunId, body.UserId, ct);
+            if (!result.Succeeded)
+            {
+                return Results.BadRequest(new { error = result.Error });
+            }
+            return Results.Ok(new { assignmentId = result.AssignmentId, userId = result.NewUserId });
+        });
+
         return app;
     }
 
     public sealed record StartRunDto(string ModuleId, string WorkflowId, Dictionary<string, string?>? Inputs);
+
+    public sealed record AssignDto(Guid PhaseRunId, Guid UserId);
 }

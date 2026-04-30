@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AgentPlatform.Application.Abstractions;
 using AgentPlatform.Application.Runs;
+using AgentPlatform.Domain.Tenants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AgentPlatform.Api.Endpoints;
@@ -13,11 +14,31 @@ public static class PhaseEndpoints
 
         group.MapPost("/{phaseRunId:guid}/open", OpenAsync);
         group.MapPost("/{phaseRunId:guid}/close", CloseAsync);
+        group.MapPost("/{phaseRunId:guid}/reassign", ReassignAsync);
         group.MapGet("/{phaseRunId:guid}/files", ListFilesAsync);
         group.MapGet("/{phaseRunId:guid}/files/content", GetFileAsync);
 
         return app;
     }
+
+    private static async Task<IResult> ReassignAsync(
+        Guid phaseRunId,
+        ReassignDto body,
+        IRequestTenantContext tenantContext,
+        WorkflowRunService runs,
+        CancellationToken cancellationToken)
+    {
+        if (!tenantContext.TryGetTenantId(out var tenantId)) { return Results.Unauthorized(); }
+        if (!tenantContext.Roles.Contains(Role.Admin)) { return Results.Forbid(); }
+        var result = await runs.ReassignAsync(tenantId, tenantContext.UserId, phaseRunId, body.UserId, cancellationToken).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            return Results.Problem(result.Error ?? "reassign failed", statusCode: StatusCodes.Status400BadRequest);
+        }
+        return Results.Ok(new { assignmentId = result.AssignmentId, userId = result.NewUserId });
+    }
+
+    public sealed record ReassignDto(Guid UserId);
 
     private static async Task<IResult> OpenAsync(
         Guid phaseRunId,

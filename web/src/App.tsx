@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import StartRun from './pages/StartRun';
 import Inbox from './pages/Inbox';
 import Phase from './pages/Phase';
+import Run from './pages/Run';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const session = getSession();
@@ -39,6 +40,14 @@ export default function App() {
         element={
           <Protected>
             <Inbox />
+          </Protected>
+        }
+      />
+      <Route
+        path="/runs/:id"
+        element={
+          <Protected>
+            <Run />
           </Protected>
         }
       />

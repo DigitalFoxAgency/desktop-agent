@@ -32,12 +32,49 @@ public sealed class PostgresWorkflowRunRepository : IWorkflowRunRepository
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task AppendNextPhaseAsync(
+        PhaseRun completedPhase,
+        WorkflowRun run,
+        PhaseRun? nextPhase,
+        Assignment? assignment,
+        InboxItem? inboxItem,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(completedPhase);
+        ArgumentNullException.ThrowIfNull(run);
+
+        _db.PhaseRuns.Update(completedPhase);
+        _db.WorkflowRuns.Update(run);
+        if (nextPhase is not null)
+        {
+            _db.PhaseRuns.Add(nextPhase);
+        }
+        if (assignment is not null)
+        {
+            _db.Assignments.Add(assignment);
+        }
+        if (inboxItem is not null)
+        {
+            _db.InboxItems.Add(inboxItem);
+        }
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<WorkflowRun?> GetAsync(Guid tenantId, Guid runId, CancellationToken cancellationToken)
     {
         return await _db.WorkflowRuns
             .IgnoreQueryFilters()
             .Include(r => r.Phases)
             .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.Id == runId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<WorkflowRun?> GetRunByPhaseAsync(Guid tenantId, Guid phaseRunId, CancellationToken cancellationToken)
+    {
+        return await _db.WorkflowRuns
+            .IgnoreQueryFilters()
+            .Include(r => r.Phases)
+            .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.Phases.Any(p => p.Id == phaseRunId), cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -51,6 +88,40 @@ public sealed class PostgresWorkflowRunRepository : IWorkflowRunRepository
             .Take(limit)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    public async Task<AssignmentLookup?> GetCurrentAssignmentAsync(Guid tenantId, Guid phaseRunId, CancellationToken cancellationToken)
+    {
+        var assignment = await _db.Assignments
+            .IgnoreQueryFilters()
+            .Where(a => a.TenantId == tenantId && a.PhaseRunId == phaseRunId && a.State != AssignmentState.Reassigned && a.State != AssignmentState.Released)
+            .OrderByDescending(a => a.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (assignment is null) { return null; }
+
+        var phase = await _db.PhaseRuns.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Id == phaseRunId, cancellationToken)
+            .ConfigureAwait(false);
+        if (phase is null) { return null; }
+
+        var run = await _db.WorkflowRuns.IgnoreQueryFilters().Include(r => r.Phases)
+            .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.Id == phase.WorkflowRunId, cancellationToken)
+            .ConfigureAwait(false);
+        if (run is null) { return null; }
+
+        return new AssignmentLookup(assignment, assignment.RequiredRole, phase, run);
+    }
+
+    public async Task ReassignAsync(Assignment current, InboxItem? newInbox, WorkflowRun run, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(run);
+
+        _db.Assignments.Update(current);
+        if (newInbox is not null) { _db.InboxItems.Add(newInbox); }
+        _db.WorkflowRuns.Update(run);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<InboxItem>> ListInboxAsync(Guid tenantId, Guid userId, int limit, CancellationToken cancellationToken)

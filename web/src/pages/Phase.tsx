@@ -15,6 +15,7 @@ export default function Phase() {
   const [usage, setUsage] = useState<{ input: number; output: number } | null>(null);
   const [opened, setOpened] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const [thinking, setThinking] = useState(false);
   const socketRef = useRef<PhaseSocket | null>(null);
   const assistantBufferRef = useRef<string>('');
 
@@ -30,11 +31,13 @@ export default function Phase() {
           (evt) => {
             switch (evt.type) {
               case 'assistant_chunk':
+                setThinking(false);
                 assistantBufferRef.current += evt.text;
                 setMessages((prev) => upsertAssistant(prev, assistantBufferRef.current));
                 break;
               case 'assistant_turn_complete':
                 assistantBufferRef.current = '';
+                setThinking(false);
                 setMessages((prev) => prev.map((m) => (m.pending ? { ...m, pending: false } : m)));
                 break;
               case 'file_changed':
@@ -77,6 +80,7 @@ export default function Phase() {
   const sendUser = useMemo(() => (text: string) => {
     if (!socketRef.current) return;
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'user', text }]);
+    setThinking(true);
     socketRef.current.send(text);
   }, []);
 
@@ -115,7 +119,7 @@ export default function Phase() {
         </div>
       )}
       <main className="flex-1 grid grid-cols-[1fr_320px] gap-4 p-4 min-h-0">
-        <ChatPane messages={messages} onSend={sendUser} disabled={!connected} />
+        <ChatPane messages={messages} onSend={sendUser} disabled={!connected} thinking={thinking} />
         {phaseRunId && opened ? (
           <FileTree phaseRunId={phaseRunId} refreshSignal={refreshSignal} />
         ) : (

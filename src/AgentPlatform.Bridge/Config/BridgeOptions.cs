@@ -25,5 +25,8 @@ public sealed class BridgeOptions
 
     /// <summary>When true, the Bridge swaps the real claude wrapper for a scripted mock — useful for plumbing smoke tests without an Anthropic key.</summary>
     public bool Mock { get; set; }
+
+    /// <summary>In-container path to the run's module root (e.g. <c>/opt/modules/df-client-launchpad</c>). When set, the Bridge wires the module's <c>source/template/.claude/skills</c> into the claude CLI's home so its slash commands resolve, and the wrapper adds the module dir to claude's tool-access scope.</summary>
+    public string? ModuleDir { get; set; }
 }
 

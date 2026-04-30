@@ -56,4 +56,16 @@ public sealed class FakeRunContainerDriver : IRunContainerDriver
         lock (_ensuredVolumes) { _ensuredVolumes.Add(runId); }
         return Task.CompletedTask;
     }
+
+    public IReadOnlyList<string> Archived
+    {
+        get { lock (_archived) { return _archived.ToArray(); } }
+    }
+    private readonly List<string> _archived = new();
+
+    public Task ArchiveVolumeAsync(string runId, CancellationToken cancellationToken)
+    {
+        lock (_archived) { _archived.Add(runId); }
+        return Task.CompletedTask;
+    }
 }

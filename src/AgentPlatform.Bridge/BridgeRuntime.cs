@@ -4,6 +4,7 @@ using System.Text.Json;
 using AgentPlatform.Bridge.ClaudeWrapper;
 using AgentPlatform.Bridge.Config;
 using AgentPlatform.Bridge.FileWatcher;
+using AgentPlatform.Bridge.PhaseCompletion;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -66,6 +67,12 @@ public sealed class BridgeRuntime : BackgroundService
         var watcherLog = LoggerFactory.Create(b => b.AddSimpleConsole()).CreateLogger<TreeEventPublisher>();
         await using var watcher = new TreeEventPublisher(_opts.WorkingDir, watcherLog, LoggerFactory.Create(b => b.AddSimpleConsole()));
 
+        var detectorLog = LoggerFactory.Create(b => b.AddSimpleConsole()).CreateLogger<CompletionDetector>();
+        await using var completion = new CompletionDetector(_opts.WorkingDir, _opts.Skill, detectorLog);
+        completion.Start();
+
+        WireModuleSkills();
+
         await _wrapper.StartAsync(new ClaudeSessionSpec(
             _opts.WorkingDir,
             _opts.Skill,
@@ -73,7 +80,7 @@ public sealed class BridgeRuntime : BackgroundService
             new Dictionary<string, string>()), stoppingToken).ConfigureAwait(false);
 
         var reader = Task.Run(() => ReadIncomingAsync(ws, stoppingToken), stoppingToken);
-        var sender = Task.Run(() => SendOutgoingAsync(ws, watcher, stoppingToken), stoppingToken);
+        var sender = Task.Run(() => SendOutgoingAsync(ws, watcher, completion, stoppingToken), stoppingToken);
 
         await Task.WhenAny(reader, sender).ConfigureAwait(false);
         try
@@ -88,7 +95,41 @@ public sealed class BridgeRuntime : BackgroundService
         _lifetime.StopApplication();
     }
 
-    private async Task SendOutgoingAsync(ClientWebSocket ws, TreeEventPublisher watcher, CancellationToken cancellationToken)
+    private void WireModuleSkills()
+    {
+        if (string.IsNullOrWhiteSpace(_opts.ModuleDir)) { return; }
+        var skillsSrc = Path.Combine(_opts.ModuleDir, "source", "template", ".claude", "skills");
+        if (!Directory.Exists(skillsSrc))
+        {
+            _log.LogInformation("ModuleDir set but no skills at {Src}; skipping skill wiring", skillsSrc);
+            return;
+        }
+        var home = Environment.GetEnvironmentVariable("AGP_CLAUDE_HOME") ?? Environment.GetEnvironmentVariable("HOME");
+        if (string.IsNullOrWhiteSpace(home))
+        {
+            _log.LogWarning("HOME unset; cannot wire module skills");
+            return;
+        }
+        var skillsDst = Path.Combine(home, ".claude", "skills");
+        try
+        {
+            Directory.CreateDirectory(skillsDst);
+            foreach (var skillDir in Directory.EnumerateDirectories(skillsSrc))
+            {
+                var name = Path.GetFileName(skillDir);
+                var link = Path.Combine(skillsDst, name);
+                if (Directory.Exists(link) || File.Exists(link)) { continue; }
+                File.CreateSymbolicLink(link, skillDir);
+            }
+            _log.LogInformation("Wired module skills from {Src} into {Dst}", skillsSrc, skillsDst);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Failed to wire module skills");
+        }
+    }
+
+    private async Task SendOutgoingAsync(ClientWebSocket ws, TreeEventPublisher watcher, CompletionDetector completion, CancellationToken cancellationToken)
     {
         var sendLock = new SemaphoreSlim(1, 1);
 
@@ -137,6 +178,7 @@ public sealed class BridgeRuntime : BackgroundService
                         }).ConfigureAwait(false);
                         break;
                     case ClaudeStreamEvent.SessionExited:
+                        completion.SignalSessionExited();
                         return;
                 }
             }
@@ -155,7 +197,20 @@ public sealed class BridgeRuntime : BackgroundService
             }
         }, cancellationToken);
 
-        await Task.WhenAll(claudeTask, fileTask).ConfigureAwait(false);
+        var completionTask = Task.Run(async () =>
+        {
+            await foreach (var c in completion.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            {
+                await SendFrame(new
+                {
+                    type = "phase_completed",
+                    skill = c.Skill,
+                    verified = c.Verified,
+                }).ConfigureAwait(false);
+            }
+        }, cancellationToken);
+
+        await Task.WhenAll(claudeTask, fileTask, completionTask).ConfigureAwait(false);
     }
 
     private async Task ReadIncomingAsync(ClientWebSocket ws, CancellationToken cancellationToken)

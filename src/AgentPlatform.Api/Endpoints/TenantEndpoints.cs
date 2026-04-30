@@ -17,7 +17,19 @@ public static class TenantEndpoints
         {
             if (ctx.TenantId != id) { return Results.Forbid(); }
             var users = await tenants.ListUsersAsync(id, ct);
-            return Results.Ok(users.Select(u => new { u.Id, u.Email, u.DisplayName, u.LastSignedInAt }));
+            var withRoles = await Task.WhenAll(users.Select(async u =>
+            {
+                var roles = await tenants.GetRolesAsync(id, u.Id, ct);
+                return new
+                {
+                    u.Id,
+                    u.Email,
+                    u.DisplayName,
+                    u.LastSignedInAt,
+                    Roles = roles.Select(RoleNames.ToSlug).ToArray(),
+                };
+            }));
+            return Results.Ok(withRoles);
         });
 
         group.MapPost("/{id:guid}/users", async (

@@ -69,7 +69,8 @@ builder.Services.AddScoped<ITenantRepository, PostgresTenantRepository>();
 builder.Services.AddScoped<IWorkflowRunRepository, PostgresWorkflowRunRepository>();
 builder.Services.AddScoped<IAuditLog, PostgresAuditLog>();
 builder.Services.AddScoped<IUsageMeter, PostgresUsageMeter>();
-builder.Services.AddScoped<IInboxNotifier, NoOpInboxNotifier>();
+builder.Services.AddSingleton<InboxConnectionRegistry>();
+builder.Services.AddScoped<IInboxNotifier, WebSocketInboxNotifier>();
 builder.Services.AddScoped<ISubscriptionGate, DefaultSubscriptionGate>();
 
 builder.Services.AddScoped<TenantService>();
@@ -133,7 +134,7 @@ app.UseWebSockets();
 // to re-authenticate later in the endpoint handler is too late.
 app.Use(async (ctx, next) =>
 {
-    if ((ctx.Request.Path.StartsWithSegments("/ws/phase") || ctx.Request.Path.StartsWithSegments("/ws/bridge"))
+    if ((ctx.Request.Path.StartsWithSegments("/ws/phase") || ctx.Request.Path.StartsWithSegments("/ws/bridge") || ctx.Request.Path.StartsWithSegments("/ws/inbox"))
         && !ctx.Request.Headers.ContainsKey("Authorization")
         && ctx.Request.Query.TryGetValue("token", out var qt)
         && !string.IsNullOrEmpty(qt))
@@ -157,6 +158,7 @@ app.MapInboxEndpoints();
 app.MapPhaseEndpoints();
 app.MapBridgeHub();
 app.MapPhaseSessionHub();
+app.MapInboxHub();
 
 app.Run();
 

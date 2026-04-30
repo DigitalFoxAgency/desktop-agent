@@ -218,3 +218,43 @@ export function phaseSocketUrl(phaseRunId: string): string {
   const base = (import.meta.env.VITE_API_BASE ?? '').replace(/^http/, 'ws') || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
   return `${base}/ws/phase/${phaseRunId}?token=${encodeURIComponent(token ?? '')}`;
 }
+
+export function inboxSocketUrl(): string {
+  const token = getToken();
+  const base = (import.meta.env.VITE_API_BASE ?? '').replace(/^http/, 'ws') || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+  return `${base}/ws/inbox?token=${encodeURIComponent(token ?? '')}`;
+}
+
+export interface RunDetail {
+  id: string;
+  moduleId: string;
+  workflowId: string;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  phases: { id: string; phaseId: string; order: number; status: string }[];
+}
+
+export const getRun = (runId: string) => api<RunDetail>(`/api/runs/${runId}`);
+
+export interface TenantUser {
+  id: string;
+  email: string;
+  displayName: string;
+  roles: string[];
+}
+
+export const listTenantUsers = (tenantId: string) =>
+  api<TenantUser[]>(`/api/tenants/${tenantId}/users`);
+
+export const reassignPhase = (phaseRunId: string, userId: string) =>
+  api<{ assignmentId: string; userId: string }>(
+    `/api/phases/${phaseRunId}/reassign`,
+    { method: 'POST', body: JSON.stringify({ userId }) },
+  );
+
+export const assignWaiting = (runId: string, phaseRunId: string, userId: string) =>
+  api<{ assignmentId: string; userId: string }>(
+    `/api/runs/${runId}/assign`,
+    { method: 'POST', body: JSON.stringify({ phaseRunId, userId }) },
+  );

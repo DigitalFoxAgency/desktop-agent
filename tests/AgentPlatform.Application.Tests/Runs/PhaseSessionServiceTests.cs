@@ -205,6 +205,8 @@ public sealed class PhaseSessionServiceTests
         }
 
         public Task EnsureVolumeAsync(string runId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task ArchiveVolumeAsync(string runId, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class StubBridgeFactory : IBridgeChannelFactory

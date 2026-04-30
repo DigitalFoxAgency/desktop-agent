@@ -26,6 +26,7 @@ builder.Services.Configure<BridgeOptions>(o =>
     o.Skill = cfg["SKILL"] ?? o.Skill;
     o.ClaudeBinary = cfg["CLAUDE_BINARY"] ?? o.ClaudeBinary;
     o.Mock = cfg["MOCK"] is { } m && (m == "1" || m.Equals("true", StringComparison.OrdinalIgnoreCase));
+    o.ModuleDir = cfg["MODULE_DIR"];
 });
 
 builder.Services.AddLogging(b => b.AddSimpleConsole(o => o.SingleLine = true));

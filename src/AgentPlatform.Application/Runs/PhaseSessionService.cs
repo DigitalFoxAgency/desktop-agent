@@ -207,6 +207,22 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
         {
             await foreach (var evt in handle.Channel.ReadEventsAsync(cancellationToken).ConfigureAwait(false))
             {
+                if (evt is BridgeEvent.PhaseCompleted completion)
+                {
+                    await using var scope = _scopes.CreateAsyncScope();
+                    var runs = scope.ServiceProvider.GetRequiredService<WorkflowRunService>();
+                    try
+                    {
+                        await runs.OnPhaseCompletedAsync(handle.TenantId, handle.PhaseRunId, completion.Verified, CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogError(ex, "Phase hand-off failed for {PhaseRunId}", handle.PhaseRunId);
+                    }
+                    // Tear down the container; the next phase opens a fresh one.
+                    _ = Task.Run(() => CloseAsync(handle.PhaseRunId, CancellationToken.None), CancellationToken.None);
+                    return;
+                }
                 if (evt is BridgeEvent.TokenUsage usage)
                 {
                     await using var scope = _scopes.CreateAsyncScope();
@@ -276,6 +292,11 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
             ["AGP_BRIDGE_URL"] = _opts.BridgeUrl,
             ["AGP_BRIDGE_TOKEN"] = bridgeToken,
             ["AGP_WORKING_DIR"] = "/workspace",
+            // The runtime mounts modules read-only at /opt/modules; tell the
+            // Bridge where this run's module sits so it can wire skills + tool
+            // access without polluting /workspace.
+            ["AGP_MODULE_DIR"] = $"/opt/modules/{run.ModuleId}",
+            ["AGP_PERMISSION_MODE"] = string.IsNullOrWhiteSpace(_opts.ClaudePermissionMode) ? "" : _opts.ClaudePermissionMode,
             ["ANTHROPIC_API_KEY"] = _opts.AnthropicApiKey ?? string.Empty,
             ["ANTHROPIC_PROMPT_CACHE"] = "1",
         };
@@ -351,4 +372,7 @@ public sealed class PhaseSessionOptions
 
     /// <summary>When true, the API instructs the Bridge to run in mock mode (scripted responses, no Anthropic call). Useful for plumbing smoke tests.</summary>
     public bool MockBridge { get; set; }
+
+    /// <summary>Override for claude's <c>--permission-mode</c>. Until US4's per-action confirmation surface is wired, set to <c>acceptEdits</c> (let edits through, prompt on Bash) or <c>bypassPermissions</c> (skip all gates) for end-to-end testing. Leave empty for claude's default (interactive ask).</summary>
+    public string? ClaudePermissionMode { get; set; }
 }

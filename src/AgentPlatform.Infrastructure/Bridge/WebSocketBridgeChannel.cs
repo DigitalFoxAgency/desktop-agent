@@ -19,7 +19,8 @@ public sealed class WebSocketBridgeChannel : IBridgeChannel, IDisposable
 
     private readonly WebSocket _socket;
     private readonly ILogger<WebSocketBridgeChannel> _log;
-    private readonly Channel<BridgeEvent> _events = Channel.CreateUnbounded<BridgeEvent>();
+    private readonly object _subLock = new();
+    private readonly List<Channel<BridgeEvent>> _subscribers = new();
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _readerTask;
@@ -34,8 +35,36 @@ public sealed class WebSocketBridgeChannel : IBridgeChannel, IDisposable
 
     public Task ReaderCompletion => _readerTask;
 
-    public IAsyncEnumerable<BridgeEvent> ReadEventsAsync(CancellationToken cancellationToken)
-        => _events.Reader.ReadAllAsync(cancellationToken);
+    public async IAsyncEnumerable<BridgeEvent> ReadEventsAsync(
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Per-subscriber channel so multiple consumers (e.g. PhaseSessionService's
+        // usage pump and PhaseSessionHub's browser fan-out) each see every event.
+        var sub = Channel.CreateUnbounded<BridgeEvent>();
+        lock (_subLock) { _subscribers.Add(sub); }
+        try
+        {
+            await foreach (var evt in sub.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            {
+                yield return evt;
+            }
+        }
+        finally
+        {
+            lock (_subLock) { _subscribers.Remove(sub); }
+            sub.Writer.TryComplete();
+        }
+    }
+
+    private void Broadcast(BridgeEvent evt)
+    {
+        Channel<BridgeEvent>[] snapshot;
+        lock (_subLock) { snapshot = _subscribers.ToArray(); }
+        foreach (var sub in snapshot)
+        {
+            sub.Writer.TryWrite(evt);
+        }
+    }
 
     public Task SendUserInputAsync(string text, CancellationToken cancellationToken)
         => SendFrameAsync(new BridgeFrame { Type = "user_input", Text = text }, cancellationToken);
@@ -64,7 +93,9 @@ public sealed class WebSocketBridgeChannel : IBridgeChannel, IDisposable
         }
         catch (WebSocketException) { /* ignore */ }
         await _cts.CancelAsync().ConfigureAwait(false);
-        _events.Writer.TryComplete();
+        Channel<BridgeEvent>[] snapshot;
+        lock (_subLock) { snapshot = _subscribers.ToArray(); _subscribers.Clear(); }
+        foreach (var sub in snapshot) { sub.Writer.TryComplete(); }
     }
 
     private async Task SendFrameAsync(BridgeFrame frame, CancellationToken cancellationToken)
@@ -112,7 +143,9 @@ public sealed class WebSocketBridgeChannel : IBridgeChannel, IDisposable
         }
         finally
         {
-            _events.Writer.TryComplete();
+            Channel<BridgeEvent>[] snapshot;
+            lock (_subLock) { snapshot = _subscribers.ToArray(); _subscribers.Clear(); }
+            foreach (var sub in snapshot) { sub.Writer.TryComplete(); }
         }
     }
 
@@ -158,7 +191,7 @@ public sealed class WebSocketBridgeChannel : IBridgeChannel, IDisposable
         };
         if (evt is not null)
         {
-            _events.Writer.TryWrite(evt);
+            Broadcast(evt);
         }
     }
 

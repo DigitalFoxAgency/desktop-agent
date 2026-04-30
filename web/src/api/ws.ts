@@ -1,4 +1,31 @@
-import { phaseSocketUrl } from './client';
+import { inboxSocketUrl, phaseSocketUrl } from './client';
+
+export type InboxEvent = {
+  type: 'inbox_item_added';
+  id: string;
+  phaseRunId: string;
+  kind: string;
+  title: string;
+  subtitle: string | null;
+  createdAt: string;
+};
+
+export function connectInbox(onEvent: (e: InboxEvent) => void): { close: () => void } {
+  const ws = new WebSocket(inboxSocketUrl());
+  ws.onmessage = (msg) => {
+    try {
+      const parsed = JSON.parse(msg.data) as InboxEvent;
+      onEvent(parsed);
+    } catch {
+      // ignore malformed frames
+    }
+  };
+  return {
+    close() {
+      if (ws.readyState === WebSocket.OPEN) ws.close(1000, 'bye');
+    },
+  };
+}
 
 export type PhaseEvent =
   | { type: 'assistant_chunk'; text: string }

@@ -35,10 +35,31 @@ public sealed class StreamJsonClaudeWrapper : IClaudeWrapper, IAsyncDisposable
             "--print",
             "--verbose",
         };
-        if (!string.IsNullOrWhiteSpace(spec.Skill))
+        // Note: Claude Code 2.x invokes skills via the `/<skill-name>` slash
+        // command inside the prompt, not via a CLI flag. The skill name is
+        // prepended to the seed message below.
+
+        // Grant claude tool-access to the run's module directory (e.g. the
+        // launchpad source tree) so its CLAUDE.md / agents / scripts / template
+        // files are readable without polluting the working dir.
+        var moduleDir = Environment.GetEnvironmentVariable("AGP_MODULE_DIR");
+        if (!string.IsNullOrWhiteSpace(moduleDir) && Directory.Exists(moduleDir))
         {
-            args.Add("--skill");
-            args.Add(spec.Skill);
+            args.Add("--add-dir");
+            args.Add(moduleDir);
+        }
+
+        // Until US4's per-action confirmation surface lands, claude's own
+        // permission gate would block every Write/Edit/Bash. Allow the API to
+        // override the mode (acceptEdits | acceptAll | bypassPermissions | ask
+        // | plan). Default `acceptEdits` lets file edits flow but still
+        // prompts on Bash; production should keep claude in `ask` and rely on
+        // the policy engine + ConfirmationGate.
+        var permMode = Environment.GetEnvironmentVariable("AGP_PERMISSION_MODE");
+        if (!string.IsNullOrWhiteSpace(permMode))
+        {
+            args.Add("--permission-mode");
+            args.Add(permMode);
         }
 
         var psi = new ProcessStartInfo
@@ -82,9 +103,12 @@ public sealed class StreamJsonClaudeWrapper : IClaudeWrapper, IAsyncDisposable
         _stdoutReader = Task.Run(() => ReadStdoutAsync(_process.StandardOutput.BaseStream, cancellationToken), cancellationToken);
         _stderrReader = Task.Run(() => ReadStderrAsync(_process.StandardError, cancellationToken), cancellationToken);
 
-        var seed = spec.Inputs.Count == 0
-            ? "Begin the assigned skill."
-            : "Begin the assigned skill with these inputs:\n" + string.Join("\n", spec.Inputs.Select(kv => $"- {kv.Key}: {kv.Value}"));
+        var skillCommand = string.IsNullOrWhiteSpace(spec.Skill) ? "" : $"/{spec.Skill}";
+        var inputsBlock = spec.Inputs.Count == 0
+            ? ""
+            : "\n\nInputs:\n" + string.Join("\n", spec.Inputs.Select(kv => $"- {kv.Key}: {kv.Value}"));
+        var seed = (skillCommand + inputsBlock).Trim();
+        if (seed.Length == 0) { seed = "Begin the assigned task."; }
         return SendInputAsync(seed, cancellationToken);
     }
 

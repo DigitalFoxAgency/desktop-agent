@@ -26,6 +26,9 @@ public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
     public async Task EnsureVolumeAsync(string runId, CancellationToken cancellationToken)
         => await _volumes.EnsureAsync(runId, cancellationToken).ConfigureAwait(false);
 
+    public Task ArchiveVolumeAsync(string runId, CancellationToken cancellationToken)
+        => _volumes.ArchiveAsync(runId, cancellationToken);
+
     public async Task<RunContainerHandle> StartAsync(RunContainerSpec spec, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -145,6 +148,8 @@ public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
             return;
         }
 
+        await TryDumpLogsAsync(containerId, cancellationToken).ConfigureAwait(false);
+
         try
         {
             await _docker.Containers.StopContainerAsync(
@@ -167,6 +172,32 @@ public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
         catch (DockerApiException ex)
         {
             _log.LogWarning(ex, "Remove failed for {Id}", containerId);
+        }
+    }
+
+    private async Task TryDumpLogsAsync(string containerId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_opts.LogArchivePath))
+        {
+            return;
+        }
+        try
+        {
+            Directory.CreateDirectory(_opts.LogArchivePath);
+            var path = Path.Combine(_opts.LogArchivePath, $"{containerId[..Math.Min(12, containerId.Length)]}-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.log");
+            await using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+            using var stream = await _docker.Containers.GetContainerLogsAsync(containerId, tty: false, new ContainerLogsParameters
+            {
+                ShowStdout = true,
+                ShowStderr = true,
+                Timestamps = true,
+            }, cancellationToken).ConfigureAwait(false);
+            await stream.CopyOutputToAsync(Stream.Null, fs, fs, cancellationToken).ConfigureAwait(false);
+            _log.LogInformation("Container {Id} logs flushed to {Path}", containerId, path);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Container log flush failed for {Id}", containerId);
         }
     }
 
@@ -224,4 +255,7 @@ public sealed class DockerDriverOptions
 
     /// <summary>Host directory holding pre-authenticated <c>claude</c> credentials, bind-mounted to <c>/home/runner/.claude</c> in the run container. Populate it once by running <c>claude login</c> via the helper script.</summary>
     public string? ClaudeCredentialsHostPath { get; set; }
+
+    /// <summary>Optional host directory to flush container stdout/stderr into when a phase tears down. Useful for after-the-fact debugging.</summary>
+    public string? LogArchivePath { get; set; }
 }

@@ -11,15 +11,16 @@ interface Props {
   messages: ChatMessage[];
   onSend: (text: string) => void;
   disabled?: boolean;
+  thinking?: boolean;
 }
 
-export default function ChatPane({ messages, onSend, disabled }: Props) {
+export default function ChatPane({ messages, onSend, disabled, thinking }: Props) {
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
+  }, [messages, thinking]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +48,16 @@ export default function ChatPane({ messages, onSend, disabled }: Props) {
             </div>
           </div>
         ))}
+        {thinking && (
+          <div className="flex items-center gap-2 text-sm text-gray-500" aria-live="polite">
+            <span className="inline-flex gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </span>
+            <span>Claude is thinking…</span>
+          </div>
+        )}
       </div>
       <form onSubmit={submit} className="border-t p-3 flex gap-2">
         <input
