@@ -83,6 +83,7 @@ public static class PhaseEndpoints
     private static IResult ListFilesAsync(
         Guid phaseRunId,
         IPhaseSessionService sessions,
+        IRequestTenantContext tenantContext,
         [FromQuery] string? path)
     {
         var session = sessions.GetActive(phaseRunId);
@@ -101,27 +102,32 @@ public static class PhaseEndpoints
         {
             return Results.NotFound();
         }
+        var roles = tenantContext.Roles;
         var entries = Directory.EnumerateFileSystemEntries(fullPath)
-            .OrderBy(e => Directory.Exists(e) ? 0 : 1)
-            .ThenBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
             .Select(e =>
             {
                 var info = new FileInfo(e);
+                var entryRel = Path.GetRelativePath(root, e).Replace('\\', '/');
                 return new
                 {
                     name = Path.GetFileName(e),
-                    path = Path.GetRelativePath(root, e).Replace('\\', '/'),
+                    path = entryRel,
                     isDirectory = Directory.Exists(e),
                     size = info.Exists ? info.Length : 0L,
                     modifiedAt = info.Exists ? info.LastWriteTimeUtc : (DateTime?)null,
                 };
-            }).ToList();
+            })
+            .Where(e => RoleFileVisibility.IsVisible(e.path, roles))
+            .OrderBy(e => e.isDirectory ? 0 : 1)
+            .ThenBy(e => e.name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         return Results.Ok(entries);
     }
 
     private static IResult GetFileAsync(
         Guid phaseRunId,
         IPhaseSessionService sessions,
+        IRequestTenantContext tenantContext,
         [FromQuery] string path)
     {
         var session = sessions.GetActive(phaseRunId);
@@ -138,6 +144,11 @@ public static class PhaseEndpoints
         if (!fullPath.StartsWith(root, StringComparison.Ordinal))
         {
             return Results.BadRequest(new { error = "path escapes working dir" });
+        }
+        // Don't leak existence — return 404 to non-tech callers reaching for hidden paths.
+        if (!RoleFileVisibility.IsVisible(path.Replace('\\', '/'), tenantContext.Roles))
+        {
+            return Results.NotFound();
         }
         if (!File.Exists(fullPath))
         {

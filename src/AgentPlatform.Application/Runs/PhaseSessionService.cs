@@ -297,6 +297,8 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
             // access without polluting /workspace.
             ["AGP_MODULE_DIR"] = $"/opt/modules/{run.ModuleId}",
             ["AGP_PERMISSION_MODE"] = string.IsNullOrWhiteSpace(_opts.ClaudePermissionMode) ? "" : _opts.ClaudePermissionMode,
+            ["AGP_SYSTEM_PROMPT"] = BuildSystemPrompt(run, phase, skill),
+            ["AGP_RUN_INPUTS"] = run.InputsJson,
             ["ANTHROPIC_API_KEY"] = _opts.AnthropicApiKey ?? string.Empty,
             ["ANTHROPIC_PROMPT_CACHE"] = "1",
         };
@@ -331,6 +333,32 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
         }
 
         return env;
+    }
+
+    private static string BuildSystemPrompt(WorkflowRun run, PhaseRun phase, string skill)
+    {
+        // Deterministic orientation message injected at session start. Stops
+        // claude from spinning on "where do I write?" and "is /opt/modules
+        // writable?" — the answers are: /workspace, no.
+        return string.Join('\n', new[]
+        {
+            "You are running inside the Agent Platform's per-phase sandbox.",
+            "",
+            $"Module: {run.ModuleId}",
+            $"Workflow: {run.WorkflowId}",
+            $"Phase: {phase.PhaseId} (skill: {skill})",
+            "",
+            "Filesystem layout:",
+            "- `/workspace` is your working directory and persistent volume across phases. Treat it as the module's project root. WRITE ALL OUTPUTS UNDER `/workspace`. Anything you create here is what end-users see in the chat UI's file tree.",
+            "- `/opt/modules/<module-id>/` is the read-only module source (CLAUDE.md, agency skills, template files). READ-ONLY. NEVER attempt to write or run mkdir/cp into it; it will fail and waste turns. Use it only for reference.",
+            "- The module's slash-skills (e.g. `/init`, `/pre-research`) are already wired into your home; invoke them by name.",
+            "",
+            "Operating principles:",
+            "1. Don't ask the user where to write — always write under `/workspace`. If a SKILL.md mentions `clients/<slug>/` or similar, place it under `/workspace/clients/<slug>/`.",
+            "2. Don't probe for permissions or settings files — assume you have full write access to `/workspace` and read access to `/opt/modules`.",
+            "3. Keep replies concise and human-friendly. The user is often a non-technical agency role (marketer, strategist, designer). Surface progress in plain language; reserve technical detail for when asked.",
+            "4. When the assigned phase's work is done, append a single line `[<skill>: completed]` to `/workspace/SESSION-LOG.md`. The platform watches this marker and queues the next phase automatically.",
+        });
     }
 
     private static decimal EstimateCostUsd(BridgeEvent.TokenUsage u)

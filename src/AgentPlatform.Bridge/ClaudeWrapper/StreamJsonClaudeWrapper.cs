@@ -62,6 +62,16 @@ public sealed class StreamJsonClaudeWrapper : IClaudeWrapper, IAsyncDisposable
             args.Add(permMode);
         }
 
+        // Orientation prompt produced by the API (PhaseSessionService.
+        // BuildSystemPrompt). Tells claude that cwd is /workspace, the module
+        // dir is read-only, etc. Prevents the back-and-forth on every open.
+        var systemPrompt = Environment.GetEnvironmentVariable("AGP_SYSTEM_PROMPT");
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            args.Add("--append-system-prompt");
+            args.Add(systemPrompt);
+        }
+
         var psi = new ProcessStartInfo
         {
             FileName = _opts.ClaudeBinary,
@@ -104,10 +114,35 @@ public sealed class StreamJsonClaudeWrapper : IClaudeWrapper, IAsyncDisposable
         _stderrReader = Task.Run(() => ReadStderrAsync(_process.StandardError, cancellationToken), cancellationToken);
 
         var skillCommand = string.IsNullOrWhiteSpace(spec.Skill) ? "" : $"/{spec.Skill}";
-        var inputsBlock = spec.Inputs.Count == 0
+        var inputsFromSpec = spec.Inputs.Count == 0
             ? ""
             : "\n\nInputs:\n" + string.Join("\n", spec.Inputs.Select(kv => $"- {kv.Key}: {kv.Value}"));
-        var seed = (skillCommand + inputsBlock).Trim();
+        // Prefer run-level inputs (from the workflow start form) when the
+        // bridge spec didn't carry any — saves the user from being asked.
+        var inputsFromRun = "";
+        var runInputsJson = Environment.GetEnvironmentVariable("AGP_RUN_INPUTS");
+        if (string.IsNullOrEmpty(inputsFromSpec) && !string.IsNullOrWhiteSpace(runInputsJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(runInputsJson);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.EnumerateObject().Any())
+                {
+                    var lines = new List<string>();
+                    foreach (var p in doc.RootElement.EnumerateObject())
+                    {
+                        var v = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : p.Value.GetRawText();
+                        if (!string.IsNullOrWhiteSpace(v)) { lines.Add($"- {p.Name}: {v}"); }
+                    }
+                    if (lines.Count > 0)
+                    {
+                        inputsFromRun = "\n\nInputs:\n" + string.Join('\n', lines);
+                    }
+                }
+            }
+            catch (JsonException) { /* drop malformed inputs */ }
+        }
+        var seed = (skillCommand + inputsFromSpec + inputsFromRun).Trim();
         if (seed.Length == 0) { seed = "Begin the assigned task."; }
         return SendInputAsync(seed, cancellationToken);
     }

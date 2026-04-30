@@ -15,7 +15,10 @@ public sealed class CompletionDetector : IAsyncDisposable
 
     private readonly string _workingDir;
     private readonly string _skill;
-    private readonly string _verificationLine;
+    // The launchpad pattern: skills auto-write `[<skill>: completed]` on
+    // success; a human reviewer later promotes that to `[<skill>: verified]`.
+    // For automated phases the platform should fire on either marker.
+    private readonly string[] _completionMarkers;
     private readonly ILogger<CompletionDetector> _log;
     private readonly Channel<PhaseCompletionSignal> _channel = Channel.CreateBounded<PhaseCompletionSignal>(new BoundedChannelOptions(1)
     {
@@ -34,7 +37,7 @@ public sealed class CompletionDetector : IAsyncDisposable
     {
         _workingDir = workingDir;
         _skill = skill;
-        _verificationLine = $"{skill}: verified";
+        _completionMarkers = new[] { $"{skill}: completed", $"{skill}: verified" };
         _log = log;
         _debounce = debounce ?? TimeSpan.FromMilliseconds(500);
 
@@ -114,13 +117,16 @@ public sealed class CompletionDetector : IAsyncDisposable
             catch (IOException) { continue; }
             catch (UnauthorizedAccessException) { continue; }
 
-            if (text.Contains(_verificationLine, StringComparison.OrdinalIgnoreCase))
+            foreach (var marker in _completionMarkers)
             {
-                _signalled = true;
-                _log.LogInformation("CompletionDetector matched '{Marker}' in {Path}", _verificationLine, path);
-                _channel.Writer.TryWrite(new PhaseCompletionSignal(_skill, true, DateTimeOffset.UtcNow));
-                _channel.Writer.TryComplete();
-                return true;
+                if (text.Contains(marker, StringComparison.OrdinalIgnoreCase))
+                {
+                    _signalled = true;
+                    _log.LogInformation("CompletionDetector matched '{Marker}' in {Path}", marker, path);
+                    _channel.Writer.TryWrite(new PhaseCompletionSignal(_skill, true, DateTimeOffset.UtcNow));
+                    _channel.Writer.TryComplete();
+                    return true;
+                }
             }
         }
         return false;
