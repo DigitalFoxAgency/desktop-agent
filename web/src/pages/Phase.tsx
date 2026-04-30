@@ -104,7 +104,16 @@ export default function Phase() {
           <button onClick={leave} className="underline">Close phase</button>
         </div>
       </header>
-      {error && (
+      {error && /Run paused/i.test(error) ? (
+        <div className="bg-amber-50 text-amber-900 text-sm px-4 py-3 border-b border-amber-200">
+          <div className="font-medium">Run paused</div>
+          <div className="mt-1">{error}</div>
+          <div className="mt-2 text-xs text-amber-800">
+            Admins: raise <code>AgentPlatform__PhaseSession__PerRunCostCapCents</code> on the API, or set
+            {' '}<code>AgentPlatform__PhaseSession__DisableCostCap=true</code> for dev. Restart the API and reopen the phase.
+          </div>
+        </div>
+      ) : error ? (
         <div className="bg-red-50 text-red-700 text-sm px-4 py-2 flex items-center justify-between">
           <span>Couldn't open phase session: {error}</span>
           <button
@@ -117,7 +126,7 @@ export default function Phase() {
             Retry
           </button>
         </div>
-      )}
+      ) : null}
       <main className="flex-1 grid grid-cols-[1fr_320px] gap-4 p-4 min-h-0">
         <ChatPane messages={messages} onSend={sendUser} disabled={!connected} thinking={thinking} />
         {phaseRunId && opened ? (

@@ -84,6 +84,14 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
         }
 
         var (phase, run) = lookup;
+        if (run.Status == RunStatus.Paused)
+        {
+            // Common cause: cost cap. Tell the UI exactly why so it can offer
+            // an admin "raise cap" / "resume" affordance instead of a generic
+            // disconnect.
+            var reason = $"Run paused (cost cap ${_opts.PerRunCostCapCents / 100m:F2} reached). Increase the cap or disable it to continue.";
+            return OpenPhaseSessionResult.Failure(reason);
+        }
         var workflow = await modules.GetWorkflowAsync(run.ModuleId, run.WorkflowId, cancellationToken).ConfigureAwait(false);
         var phaseDef = workflow?.Phases.FirstOrDefault(p => p.PhaseId == phase.PhaseId);
         if (workflow is null || phaseDef is null)
@@ -244,10 +252,26 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
                         RecordedAt = usage.OccurredAt,
                     }, CancellationToken.None).ConfigureAwait(false);
 
+                    if (_opts.DisableCostCap || _opts.PerRunCostCapCents <= 0) { continue; }
+
                     var runCostCents = await meter.GetRunCostCentsAsync(handle.WorkflowRunId, CancellationToken.None).ConfigureAwait(false);
-                    if (_opts.PerRunCostCapCents > 0 && runCostCents >= _opts.PerRunCostCapCents)
+                    if (runCostCents >= _opts.PerRunCostCapCents)
                     {
                         _log.LogWarning("Run {RunId} hit cost cap ({Cents}c); pausing", handle.WorkflowRunId, runCostCents);
+                        var runs = scope.ServiceProvider.GetRequiredService<IWorkflowRunRepository>();
+                        var run = await runs.GetAsync(handle.TenantId, handle.WorkflowRunId, CancellationToken.None).ConfigureAwait(false);
+                        if (run is not null && run.Status != RunStatus.Paused)
+                        {
+                            run.Status = RunStatus.Paused;
+                            // Reuse AppendNextPhase to persist run-status updates without writing a new phase.
+                            await runs.AppendNextPhaseAsync(
+                                run.Phases.First(p => p.Id == handle.PhaseRunId),
+                                run,
+                                nextPhase: null,
+                                assignment: null,
+                                inboxItem: null,
+                                CancellationToken.None).ConfigureAwait(false);
+                        }
                         await audit.WriteAsync(new AuditEntry
                         {
                             Id = Guid.NewGuid(),
@@ -403,4 +427,7 @@ public sealed class PhaseSessionOptions
 
     /// <summary>Override for claude's <c>--permission-mode</c>. Until US4's per-action confirmation surface is wired, set to <c>acceptEdits</c> (let edits through, prompt on Bash) or <c>bypassPermissions</c> (skip all gates) for end-to-end testing. Leave empty for claude's default (interactive ask).</summary>
     public string? ClaudePermissionMode { get; set; }
+
+    /// <summary>Dev/test toggle. When true, the per-run cost cap is skipped entirely — no <c>cost_cap_pause</c> audit is written, no run status mutation. Equivalent to setting <see cref="PerRunCostCapCents"/> to 0, but more explicit.</summary>
+    public bool DisableCostCap { get; set; }
 }
