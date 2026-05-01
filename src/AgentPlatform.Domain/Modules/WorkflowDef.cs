@@ -10,7 +10,7 @@ public sealed class WorkflowDef
     public string DisplayName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string InputsSchemaJson { get; set; } = "{}";
-    public List<PhaseDef> Phases { get; init; } = new();
+    public List<PhaseDef> Phases { get; init; } = [];
 }
 
 public sealed class PhaseDef

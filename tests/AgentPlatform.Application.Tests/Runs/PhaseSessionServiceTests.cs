@@ -121,8 +121,8 @@ public sealed class PhaseSessionServiceTests
                 WorkflowId = "onboard-client",
                 DisplayName = "Onboard Client",
                 InputsSchemaJson = "[]",
-                Phases = new()
-                {
+                Phases =
+                [
                     new PhaseDef
                     {
                         Id = PhaseDefId,
@@ -134,7 +134,7 @@ public sealed class PhaseSessionServiceTests
                         Order = 0,
                         Kind = PhaseKind.Standard,
                     },
-                },
+                ],
             };
             var modules = Substitute.For<IModuleRegistry>();
             modules.GetWorkflowAsync("df-client-launchpad", "onboard-client", Arg.Any<CancellationToken>())
@@ -182,8 +182,8 @@ public sealed class PhaseSessionServiceTests
 
     private sealed class StubDriver : IRunContainerDriver
     {
-        public List<RunContainerSpec> Started { get; } = new();
-        public List<string> Stopped { get; } = new();
+        public List<RunContainerSpec> Started { get; } = [];
+        public List<string> Stopped { get; } = [];
         private int _counter;
 
         public Task<RunContainerHandle> StartAsync(RunContainerSpec spec, CancellationToken cancellationToken)

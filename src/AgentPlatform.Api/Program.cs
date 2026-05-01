@@ -3,6 +3,7 @@ using AgentPlatform.Api.Auth;
 using AgentPlatform.Api.Endpoints;
 using AgentPlatform.Api.HostedServices;
 using AgentPlatform.Api.Hubs;
+using AgentPlatform.Api.Logging;
 using AgentPlatform.Api.Middleware;
 using AgentPlatform.Application.Abstractions;
 using AgentPlatform.Application.Auth;
@@ -26,8 +27,10 @@ using AgentPlatform.Infrastructure.Subscription;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+SerilogConfig.ConfigureLogger(builder.Host);
 
 var connectionString = builder.Configuration.GetConnectionString("Postgres")
     ?? "Host=localhost;Port=5432;Database=agentplatform;Username=postgres;Password=postgres";
@@ -129,6 +132,7 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 
 var app = builder.Build();
 
+app.UseSerilogRequestLogging();
 app.UseCors();
 app.UseWebSockets();
 
@@ -152,7 +156,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenantScope();
 
-app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
+app.MapHealthEndpoints();
 
 app.MapAuthEndpoints();
 app.MapTenantEndpoints();

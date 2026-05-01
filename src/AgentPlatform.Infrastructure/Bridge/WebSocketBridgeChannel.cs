@@ -20,7 +20,7 @@ public sealed class WebSocketBridgeChannel : IBridgeChannel, IDisposable
     private readonly WebSocket _socket;
     private readonly ILogger<WebSocketBridgeChannel> _log;
     private readonly object _subLock = new();
-    private readonly List<Channel<BridgeEvent>> _subscribers = new();
+    private readonly List<Channel<BridgeEvent>> _subscribers = [];
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _readerTask;

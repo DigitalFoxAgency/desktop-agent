@@ -14,7 +14,7 @@ public static class RunEndpoints
         group.MapPost("/", async (StartRunDto body, IRequestTenantContext ctx, WorkflowRunService runs, CancellationToken ct) =>
         {
             if (body is null) { return Results.BadRequest(new { error = "Body required." }); }
-            var inputs = body.Inputs ?? new Dictionary<string, string?>();
+            var inputs = body.Inputs ?? [];
             var result = await runs.StartAsync(new StartRunRequest(
                 ctx.TenantId, ctx.UserId, body.ModuleId, body.WorkflowId, inputs), ct);
             if (!result.Succeeded)

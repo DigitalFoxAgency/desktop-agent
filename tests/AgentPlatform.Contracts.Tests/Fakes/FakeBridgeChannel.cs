@@ -6,8 +6,8 @@ namespace AgentPlatform.Contracts.Tests.Fakes;
 public sealed class FakeBridgeChannel : IBridgeChannel
 {
     private readonly Channel<BridgeEvent> _events = Channel.CreateUnbounded<BridgeEvent>();
-    private readonly List<string> _userInputs = new();
-    private readonly List<(Guid Id, bool Confirmed, string? Note)> _decisions = new();
+    private readonly List<string> _userInputs = [];
+    private readonly List<(Guid Id, bool Confirmed, string? Note)> _decisions = [];
     private bool _closed;
 
     public IReadOnlyList<string> UserInputs

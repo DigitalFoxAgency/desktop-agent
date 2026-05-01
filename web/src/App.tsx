@@ -4,6 +4,8 @@ import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import StartRun from './pages/StartRun';
+import Catalogue from './pages/Catalogue';
+import { NotFound, OfflineBanner } from './pages/Error';
 import Inbox from './pages/Inbox';
 import Phase from './pages/Phase';
 import Run from './pages/Run';
@@ -16,8 +18,10 @@ function Protected({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/signin" element={<SignIn />} />
+    <>
+      <OfflineBanner />
+      <Routes>
+        <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
       <Route
         path="/"
@@ -32,6 +36,14 @@ export default function App() {
         element={
           <Protected>
             <StartRun />
+          </Protected>
+        }
+      />
+      <Route
+        path="/catalogue"
+        element={
+          <Protected>
+            <Catalogue />
           </Protected>
         }
       />
@@ -59,7 +71,8 @@ export default function App() {
           </Protected>
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }

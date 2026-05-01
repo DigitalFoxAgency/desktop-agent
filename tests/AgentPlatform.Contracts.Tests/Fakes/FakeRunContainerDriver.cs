@@ -11,8 +11,8 @@ public sealed class FakeRunContainerDriver : IRunContainerDriver
 {
     private int _counter;
     private readonly ConcurrentDictionary<string, RunContainerSpec> _running = new();
-    private readonly List<RunContainerSpec> _started = new();
-    private readonly List<string> _stopped = new();
+    private readonly List<RunContainerSpec> _started = [];
+    private readonly List<string> _stopped = [];
     private readonly HashSet<string> _ensuredVolumes = new(StringComparer.Ordinal);
 
     public IReadOnlyList<RunContainerSpec> Started
@@ -61,7 +61,7 @@ public sealed class FakeRunContainerDriver : IRunContainerDriver
     {
         get { lock (_archived) { return _archived.ToArray(); } }
     }
-    private readonly List<string> _archived = new();
+    private readonly List<string> _archived = [];
 
     public Task ArchiveVolumeAsync(string runId, CancellationToken cancellationToken)
     {

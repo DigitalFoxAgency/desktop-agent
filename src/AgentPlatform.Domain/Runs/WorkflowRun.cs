@@ -13,7 +13,7 @@ public sealed class WorkflowRun
     public RunStatus Status { get; set; }
     public string InputsJson { get; set; } = "{}";
     public string WorkingDirPath { get; set; } = string.Empty;
-    public List<PhaseRun> Phases { get; init; } = new();
+    public List<PhaseRun> Phases { get; init; } = [];
 }
 
 public sealed class PhaseRun

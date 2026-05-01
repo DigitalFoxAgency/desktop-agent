@@ -132,9 +132,9 @@ public sealed class WorkflowRunHandoffTests
         public Harness(bool includeMarketer = true)
         {
             TenantRepo = Substitute.For<ITenantRepository>();
-            var marketers = includeMarketer
-                ? new List<User> { new() { Id = MarketerId, TenantId = TenantId, Email = "m@x", DisplayName = "M", CreatedAt = DateTimeOffset.UtcNow } }
-                : new List<User>();
+            List<User> marketers = includeMarketer
+                ? [new() { Id = MarketerId, TenantId = TenantId, Email = "m@x", DisplayName = "M", CreatedAt = DateTimeOffset.UtcNow }]
+                : [];
             TenantRepo.FindUsersByRoleAsync(TenantId, Role.Marketer, Arg.Any<CancellationToken>())
                 .Returns(Task.FromResult<IReadOnlyList<User>>(marketers));
             TenantRepo.FindUsersByRoleAsync(TenantId, Role.Engineer, Arg.Any<CancellationToken>())
@@ -265,7 +265,7 @@ public sealed class WorkflowRunHandoffTests
 
     private sealed class TestRunDriver : IRunContainerDriver
     {
-        public List<string> Archived { get; } = new();
+        public List<string> Archived { get; } = [];
         public Task<RunContainerHandle> StartAsync(RunContainerSpec spec, CancellationToken cancellationToken)
             => Task.FromResult(new RunContainerHandle("c", DateTimeOffset.UtcNow));
         public Task StopAsync(string containerId, CancellationToken cancellationToken) => Task.CompletedTask;

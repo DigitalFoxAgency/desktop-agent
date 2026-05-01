@@ -172,8 +172,8 @@ public sealed class ConfirmationServiceTests
 
     private sealed class InMemoryConfirmationRepo : IConfirmationRepository
     {
-        public List<ConfirmationRequest> Confirmations { get; } = new();
-        public List<DangerousAction> DangerousActions { get; } = new();
+        public List<ConfirmationRequest> Confirmations { get; } = [];
+        public List<DangerousAction> DangerousActions { get; } = [];
 
         public Task AddAsync(ConfirmationRequest request, CancellationToken cancellationToken)
         {

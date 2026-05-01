@@ -21,6 +21,7 @@ export default function Dashboard() {
         <h1 className="text-2xl font-semibold">Agency dashboard</h1>
         <div className="flex gap-3">
           <Link to="/inbox" className="text-sm underline">Inbox</Link>
+          <Link to="/catalogue" className="text-sm underline">Catalogue</Link>
           <Link to="/runs/new" className="rounded bg-blue-600 px-3 py-2 text-white text-sm">
             Start a workflow
           </Link>

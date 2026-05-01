@@ -56,8 +56,14 @@ RUN mkdir -p /opt/modules
 RUN mkdir -p /workspace
 WORKDIR /workspace
 
-# Non-root user for the actual run.
-RUN useradd --create-home --shell /bin/bash runner
+# Non-root user for the actual run. Pin uid/gid 1000 so host-side bind
+# mounts can be chown'd to a known id (RunVolumeManager assumes 1000:1000).
+RUN groupadd --gid 1000 runner \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash runner \
+    && chown -R runner:runner /workspace /opt/modules \
+    && mkdir -p /home/runner/.cache /home/runner/.npm /home/runner/.config \
+    && chown -R runner:runner /home/runner
+
 USER runner
 
 ENTRYPOINT ["dotnet", "/opt/bridge/AgentPlatform.Bridge.dll"]

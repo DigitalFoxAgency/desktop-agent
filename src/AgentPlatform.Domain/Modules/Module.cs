@@ -9,7 +9,7 @@ public sealed class Module
     public string SourcePath { get; set; } = string.Empty;
     public ModuleStatus Status { get; set; }
     public string? UnavailableReason { get; set; }
-    public List<ModuleVersion> Versions { get; init; } = new();
+    public List<ModuleVersion> Versions { get; init; } = [];
 }
 
 public sealed class ModuleVersion

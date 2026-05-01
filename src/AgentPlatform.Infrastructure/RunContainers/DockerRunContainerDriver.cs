@@ -45,11 +45,24 @@ public sealed class DockerRunContainerDriver(
             AutoRemove = false,
             Memory = (long)spec.MemoryMegabytes * 1024L * 1024L,
             NanoCPUs = (long)(spec.CpuLimit * 1_000_000_000),
-            CapDrop = new List<string> { "ALL" },
-            CapAdd = new List<string> { "DAC_OVERRIDE", "FOWNER", "CHOWN" },
+            // Drop all kernel capabilities; add back only what file ops need.
+            // Without DAC_OVERRIDE/FOWNER/CHOWN, npm/pnpm caches and git
+            // workspace ops break under non-root users on bind-mounted dirs.
+            CapDrop = ["ALL"],
+            CapAdd = ["DAC_OVERRIDE", "FOWNER", "CHOWN"],
+            // Read-only root FS is intentionally NOT enabled: the in-container
+            // claude CLI + npm + gh write transient state under HOME and /tmp.
+            // We rely on (a) USER runner from Dockerfile.run-base, (b) capability
+            // drops above, and (c) no-new-privileges below to bound damage.
             ReadonlyRootfs = false,
+            // Block setuid escalation inside the container (defence-in-depth
+            // even though we're already running as a non-root user).
+            SecurityOpt = ["no-new-privileges:true"],
+            // Cap process count to stop runaway forks (e.g. a misbehaving
+            // build) from exhausting the host's PID table.
+            PidsLimit = 512,
             Mounts = BuildMounts(hostPath, _opts),
-            ExtraHosts = new List<string> { "host.docker.internal:host-gateway" },
+            ExtraHosts = ["host.docker.internal:host-gateway"],
             NetworkMode = _opts.NetworkMode,
         };
 

@@ -10,8 +10,8 @@ namespace AgentPlatform.Contracts.Tests.Fakes;
 public sealed class FakeClaudeWrapper
 {
     private readonly Channel<FakeClaudeEvent> _events = Channel.CreateUnbounded<FakeClaudeEvent>();
-    private readonly List<string> _inputs = new();
-    private readonly List<FakeClaudeEvent> _scripted = new();
+    private readonly List<string> _inputs = [];
+    private readonly List<FakeClaudeEvent> _scripted = [];
 
     public IReadOnlyList<string> Inputs
     {
