@@ -54,6 +54,16 @@ export default function StartRun() {
 
   if (isLoading) return <p className="p-6 text-sm text-gray-500">Loading modules…</p>;
 
+  function humanizeLabel(name: string): string {
+    // camelCase / snake_case / kebab-case → "Title Case With Spaces"
+    const spaced = name
+      .replace(/[_-]+/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }
+
   return (
     <div className="mx-auto max-w-2xl p-6">
       <h1 className="text-2xl font-semibold mb-6">Start a workflow</h1>
@@ -102,7 +112,7 @@ export default function StartRun() {
         {selectedWorkflow?.inputs.map((input) => (
           <label key={input.name} className="block">
             <span className="text-sm font-medium">
-              {input.name}
+              {humanizeLabel(input.name)}
               {input.required && <span className="text-red-600"> *</span>}
             </span>
             <input

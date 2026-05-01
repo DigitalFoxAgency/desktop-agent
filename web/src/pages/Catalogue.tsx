@@ -7,10 +7,7 @@ export default function Catalogue() {
 
   return (
     <div className="mx-auto max-w-4xl p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Module catalogue</h1>
-        <Link to="/" className="text-sm underline">← Dashboard</Link>
-      </div>
+      <h1 className="text-2xl font-semibold mb-6">Module catalogue</h1>
 
       {isLoading && <p className="text-sm text-gray-500">Loading modules…</p>}
       {error && <p className="text-sm text-red-600">Failed to load modules.</p>}

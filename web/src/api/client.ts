@@ -129,7 +129,8 @@ export interface RunListItem {
   id: string;
   moduleId: string;
   workflowId: string;
-  status: string;
+  // Numeric AgentPlatform.Domain.Runs.RunStatus enum value. See web/src/format.ts.
+  status: number;
   startedAt: string;
   completedAt: string | null;
 }
@@ -229,10 +230,11 @@ export interface RunDetail {
   id: string;
   moduleId: string;
   workflowId: string;
-  status: string;
+  // Numeric AgentPlatform.Domain.Runs.RunStatus enum value.
+  status: number;
   startedAt: string;
   completedAt: string | null;
-  phases: { id: string; phaseId: string; order: number; status: string }[];
+  phases: { id: string; phaseId: string; order: number; status: number }[];
 }
 
 export const getRun = (runId: string) => api<RunDetail>(`/api/runs/${runId}`);
