@@ -335,6 +335,10 @@ public sealed class PhaseSessionService(
             // access without polluting /workspace.
             ["AGP_MODULE_DIR"] = $"/opt/modules/{run.ModuleId}",
             ["AGP_PERMISSION_MODE"] = string.IsNullOrWhiteSpace(_opts.ClaudePermissionMode) ? "" : _opts.ClaudePermissionMode,
+            // When the operator chose bypassPermissions, also tell the Bridge
+            // to skip the confirmation gate so the UI doesn't show pointless
+            // dialogs that claude has already raced past.
+            ["AGP_AUTO_CONFIRM"] = string.Equals(_opts.ClaudePermissionMode, "bypassPermissions", StringComparison.OrdinalIgnoreCase) ? "1" : "0",
             ["AGP_SYSTEM_PROMPT"] = BuildSystemPrompt(run, phase, skill),
             ["AGP_RUN_INPUTS"] = run.InputsJson,
             ["ANTHROPIC_API_KEY"] = _opts.AnthropicApiKey ?? string.Empty,

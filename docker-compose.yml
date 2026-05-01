@@ -34,7 +34,7 @@ services:
       dockerfile: Dockerfile.api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: "http://+:5000"
+      ASPNETCORE_URLS: "http://+:5080"
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-agentplatform};Username=${POSTGRES_USER:-agentplatform};Password=${POSTGRES_PASSWORD:-agentplatform_dev}"
       Jwt__SigningKey: ${JWT_SIGNING_KEY:-please-rotate-me-please-rotate-me-please-rotate}
       Jwt__Issuer: agentplatform-local
@@ -45,11 +45,11 @@ services:
       AgentPlatform__Runs__Root: "/var/lib/agentplatform/runs"
       AgentPlatform__Runs__ArchiveRoot: "/var/lib/agentplatform/archive"
       AgentPlatform__PhaseSession__RunImage: "agentplatform/run-base:latest"
-      AgentPlatform__PhaseSession__BridgeUrl: "ws://api:5000/ws/bridge"
+      AgentPlatform__PhaseSession__BridgeUrl: "ws://api:5080/ws/bridge"
       AgentPlatform__PhaseSession__AnthropicApiKey: ${ANTHROPIC_API_KEY:-}
       AgentPlatform__Docker__ModulesHostPath: "${PWD}/modules"
     ports:
-      - "5000:5000"
+      - "5080:5080"
     depends_on:
       postgres:
         condition: service_healthy

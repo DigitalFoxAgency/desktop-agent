@@ -27,6 +27,7 @@ builder.Services.Configure<BridgeOptions>(o =>
     o.ClaudeBinary = cfg["CLAUDE_BINARY"] ?? o.ClaudeBinary;
     o.Mock = cfg["MOCK"] is { } m && (m == "1" || m.Equals("true", StringComparison.OrdinalIgnoreCase));
     o.ModuleDir = cfg["MODULE_DIR"];
+    o.AutoConfirm = cfg["AUTO_CONFIRM"] is { } ac && (ac == "1" || ac.Equals("true", StringComparison.OrdinalIgnoreCase));
 });
 
 builder.Services.AddLogging(b => b.AddSimpleConsole(o => o.SingleLine = true));

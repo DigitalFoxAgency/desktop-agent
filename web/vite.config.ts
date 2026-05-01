@@ -11,9 +11,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true, // never silently move to 5174 if 5173 is taken
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
-      '/ws': { target: 'ws://localhost:5000', ws: true, changeOrigin: true },
+      '/api': { target: 'http://localhost:5080', changeOrigin: true },
+      '/ws': { target: 'ws://localhost:5080', ws: true, changeOrigin: true },
     },
   },
 });

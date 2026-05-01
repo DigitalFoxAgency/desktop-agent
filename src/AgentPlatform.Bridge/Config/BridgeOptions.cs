@@ -28,5 +28,8 @@ public sealed class BridgeOptions
 
     /// <summary>In-container path to the run's module root (e.g. <c>/opt/modules/df-client-launchpad</c>). When set, the Bridge wires the module's <c>source/template/.claude/skills</c> into the claude CLI's home so its slash commands resolve, and the wrapper adds the module dir to claude's tool-access scope.</summary>
     public string? ModuleDir { get; set; }
+
+    /// <summary>When true, the IntentInterceptor classifies tool-use events but never emits <c>confirmation_request</c> frames — every action forwards as a passthrough <c>tool_use</c>. Pair with <c>--permission-mode=bypassPermissions</c> on the claude CLI so claude itself doesn't prompt either.</summary>
+    public bool AutoConfirm { get; set; }
 }
 

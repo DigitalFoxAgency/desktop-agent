@@ -35,6 +35,7 @@ SerilogConfig.ConfigureLogger(builder.Host);
 var connectionString = builder.Configuration.GetConnectionString("Postgres")
     ?? "Host=localhost;Port=5432;Database=agentplatform;Username=postgres;Password=postgres";
 var modulesRoot = builder.Configuration["AgentPlatform:ModulesRoot"] ?? "modules";
+
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
 
 builder.Services.AddSingleton(jwtOptions);

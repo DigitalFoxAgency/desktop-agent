@@ -220,6 +220,21 @@ public sealed class BridgeRuntime : BackgroundService
         Func<object, Task> sendFrame,
         CancellationToken cancellationToken)
     {
+        // Auto-confirm short-circuit: classify still happens for audit/logging
+        // but every action passes through as `tool_use` — no confirmation
+        // dialog. Pair with claude --permission-mode=bypassPermissions.
+        if (_opts.AutoConfirm)
+        {
+            await sendFrame(new
+            {
+                type = "tool_use",
+                tool = tup.ToolName,
+                commandLine = tup.CommandLine,
+                targetPath = tup.TargetPath,
+            }).ConfigureAwait(false);
+            return;
+        }
+
         InterceptionResult result;
         try
         {
