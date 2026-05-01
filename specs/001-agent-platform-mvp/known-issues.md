@@ -173,6 +173,139 @@ work.
 
 ---
 
+## Findings from full-pipeline e2e walk (2026-05-01)
+
+Drove `onboard-client` end-to-end via Playwright + an API-driven phase
+walker. The single-tenant happy path worked through phase 5; phase 5
+(`semantics`) silently stalled. Root cause turned out to be Anthropic
+"Credit balance is too low" — visible in the chat only after we
+reopened the phase post-fix. Without observability this was invisible.
+
+### E1. No phase-progress timeout — DONE in commit `89cdcad`
+**Symptoms**: `semantics` container stayed up 39+ min, claude PID alive,
+0 token-usage events, no file writes, CPU 2.56 %. The platform had no
+upper bound on phase duration; a stuck claude session held the run
+indefinitely.
+**Fix shipped**: `PhaseSessionService` tracks last-event timestamp on
+the active handle. A 30s ticker checks idle duration; past
+`IdleStallSeconds` (default 600) it pauses the run, writes a
+`phase.stalled` audit row, and closes the container. New
+`GET /api/phases/{id}/diagnostics` exposes idle state. UI shows
+"Last activity X ago" → "⚠ Stalled" badge in the orientation bar.
+
+### E2. Run-start defaults break host dev loop
+**Symptoms**: `/var/lib/agency/{vault,runs,archive}` baked in as
+defaults, only writable inside the API container. On host `dotnet run`
+the first phase open 500s on `UnauthorizedAccessException`.
+**State**: worked around by setting explicit paths in `.env.local`.
+The auto-resolve patch in `Program.cs` was reverted — operator should
+know what they're configuring. **Still TODO**: README quickstart must
+list the required env vars or ship `.env.local.example`.
+
+### E3. Port inconsistency between dev and compose — DONE in commit `a7043a6`
+API was bound to 5000 by Kestrel default, bridge URL / web client /
+docker-compose all expected 5080. Caused first-time-runner CORS errors
+(really 500s missing CORS headers due to a downstream `/var/lib/agency`
+permission failure). Pinned to 5080 everywhere.
+
+### E4. Module registry default path resolves wrong from `dotnet run`
+**Symptoms**: `AgentPlatform__ModulesRoot` defaults to relative
+`"modules"`, which resolves against the API project dir
+(`src/AgentPlatform.Api/modules`), not repo root → 0 modules loaded →
+empty catalogue → no runs can start.
+**State**: `.env.local` carries an absolute path. Auto-resolve patch
+reverted (same reasoning as E2). **Still TODO**: README coverage.
+
+### E5. .env.local + bash quoting traps
+**Symptoms**: `ConnectionStrings__Postgres="Host=...;Port=...;..."` must
+be quoted because bash treats `;` as a command separator inside
+`set -a; source`. Unquoted, the first run silently lost everything
+after the first `;`, hit the hardcoded `postgres/postgres` default,
+and 500'd on auth. Subtle and easy to miss.
+**Fix**: ship a `.env.local.example` with quoted values + a comment.
+Documented in the live `.env.local` for now.
+
+### E6. Inbox accumulates forever — DONE in commit `89cdcad`
+Confirmed live: completed phases stayed in the inbox alongside pending
+ones with no visual difference.
+**Fix shipped**: API now exposes `phaseStatus` + `inputs` per inbox
+row (`ListInboxWithContextAsync`). Web shows tabs Active / Done / All
+defaulting to Active, with each row labelled by client name and a
+status badge.
+
+### E7. ANTHROPIC_API_KEY mapping ambiguity
+**Symptoms**: Setting `ANTHROPIC_API_KEY` (the natural ops-friendly
+name) didn't work because the .NET config binding wants
+`AgentPlatform__PhaseSession__AnthropicApiKey`. Until both are set,
+claude inside the run container 401s with "Not logged in / run /login".
+**State**: documented in `.env.local` comment; alias-fallback in
+`Program.cs` was reverted (kept the codebase honest to canonical
+names instead).
+
+### E8. Status enum integers leaked to UI — DONE in commit `3c196e9`
+Replaced raw `Status: 2` / `Order: 0` displays with status badges +
+display names sweep across dashboard / inbox / run detail.
+
+### E9. Phase live view had no orientation — DONE in commit `3c196e9`
+Marketers opening a phase had no way to know which step (5 of 14),
+what role, what's expected. Orientation banner + breadcrumb + file
+preview pane wired in.
+
+### E10. Run inputs invisible everywhere — DONE in commit `89cdcad`
+Two runs for different clients were indistinguishable. Now surfaced
+on dashboard (Client column), inbox (primary heading), and run detail
+(input strip). Backed by `inputs` field on the run list/detail
+responses.
+
+### E11. SESSION-LOG marker hygiene drifts
+**Symptoms**: On the live run, `init` and `pre-research` wrote
+`[<skill>: completed]` to SESSION-LOG. `brief` wrote a "Next: добавить
+[brief: completed]" template line (interpolated, not literal) but
+never the actual marker. `research` and `semantics` wrote nothing.
+The platform still marked each phase Completed via the session-exit
+fallback (T120-era marker fallback).
+**Fix path**: stricter prompt enforcement (skill SKILL.md should make
+the marker line non-optional), and surface in audit which phases
+ended via marker vs fallback so we can detect drift.
+
+### E12. Bridge observability gaps — partially DONE in commit `89cdcad`
+**Symptoms**: When `semantics` stalled, `docker logs` only showed
+"Bridge connecting" / "Wired skills" — nothing about claude's
+activity. We had no fighting chance of debugging from outside.
+**Fix shipped (partial)**: API tracks `LastEventKind` + `LastEventAt`
+per phase, exposed via diagnostics endpoint and surfaced in the UI.
+**Still TODO**:
+- Log every `ClaudeStreamEvent` at `Info` level in the Bridge
+  (currently only emitted to the WebSocket).
+- Bump claude **stderr** from `Debug` → `Warning` so Anthropic API
+  errors / rate-limit notices surface in `docker logs`.
+- Idle heartbeat in the Bridge: every 60s log "claude idle for {n}s;
+  last event {type}".
+- Recent-events ring buffer in the Bridge (last N) accessible via
+  the diagnostics endpoint for postmortem.
+
+### E13. Synthetic-input session lifecycle — root cause for E1 stall
+**Symptoms**: claude is invoked with `--output-format stream-json
+--input-format stream-json --print`. In this mode claude reads user
+messages from stdin, streams responses, and exits when stdin closes.
+`StreamJsonClaudeWrapper` writes one seed message but never closes
+stdin (kept open for the user-typing case). For phases where the
+skill self-terminates the process, claude exits cleanly. For phases
+that finish a turn without a user follow-up (autonomous walker) or
+hit an Anthropic error, claude sits idle on stdin forever.
+**Fix paths** (deferred):
+- Cheap: `BridgeOptions.AutoEndAfterSeed` (env `AGP_AUTO_END_AFTER_SEED`)
+  closes stdin right after the seed; autonomous runs use it,
+  user-driven runs don't.
+- Right: API tracks "is a browser WebSocket attached?". If no client
+  connects within N seconds AND no `user_input` has been sent, instruct
+  the bridge to close stdin (autonomous mode). Otherwise keep stdin
+  open (interactive mode).
+The new idle watchdog (E1) catches the stall regardless, but doesn't
+prevent it.
+
+---
+
 ## Resolution map
 
 | Issue | Status | Where |
@@ -190,3 +323,16 @@ work.
 | D1 hide internal reasoning | deferred | `StreamJsonClaudeWrapper` |
 | D2 phase-complete toast | deferred | `Phase.tsx` + ws/inbox |
 | D3 refresh stale artefacts | tracked as T161 | `tasks.md` |
+| E1 idle stall watchdog | done | commit `89cdcad` |
+| E2 dev-loop default paths | docs only | README quickstart |
+| E3 port inconsistency | done | commit `a7043a6` |
+| E4 modules root resolution | docs only | README quickstart |
+| E5 .env.local quoting | docs only | `.env.local.example` |
+| E6 inbox active/done + client | done | commit `89cdcad` |
+| E7 ANTHROPIC_API_KEY mapping | docs only | `.env.local` comment |
+| E8 status integers in UI | done | commit `3c196e9` |
+| E9 phase view orientation | done | commit `3c196e9` |
+| E10 run inputs invisible | done | commit `89cdcad` |
+| E11 SESSION-LOG marker hygiene | deferred | skill prompts + audit |
+| E12 bridge observability | partial | commit `89cdcad` |
+| E13 synthetic-input lifecycle | deferred | `StreamJsonClaudeWrapper` |
