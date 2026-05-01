@@ -17,8 +17,20 @@ public static class PhaseEndpoints
         group.MapPost("/{phaseRunId:guid}/reassign", ReassignAsync);
         group.MapGet("/{phaseRunId:guid}/files", ListFilesAsync);
         group.MapGet("/{phaseRunId:guid}/files/content", GetFileAsync);
+        group.MapGet("/{phaseRunId:guid}/diagnostics", DiagnosticsAsync);
 
         return app;
+    }
+
+    private static IResult DiagnosticsAsync(
+        Guid phaseRunId,
+        IPhaseSessionService sessions,
+        IRequestTenantContext tenantContext)
+    {
+        if (!tenantContext.TryGetTenantId(out _)) { return Results.Unauthorized(); }
+        var diag = sessions.GetDiagnostics(phaseRunId);
+        if (diag is null) { return Results.NotFound(new { error = "phase not active" }); }
+        return Results.Ok(diag);
     }
 
     private static async Task<IResult> ReassignAsync(

@@ -133,4 +133,23 @@ public sealed class PostgresWorkflowRunRepository(AgentPlatformDbContext db) : I
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<InboxItemWithContext>> ListInboxWithContextAsync(Guid tenantId, Guid userId, int limit, CancellationToken cancellationToken)
+    {
+        var capped = limit <= 0 ? 50 : Math.Min(limit, 200);
+        var rows = await (
+            from i in _db.InboxItems.IgnoreQueryFilters().AsNoTracking()
+            where i.TenantId == tenantId && i.UserId == userId && i.DismissedAt == null
+            join p in _db.PhaseRuns.IgnoreQueryFilters().AsNoTracking() on i.PhaseRunId equals p.Id
+            join r in _db.WorkflowRuns.IgnoreQueryFilters().AsNoTracking() on p.WorkflowRunId equals r.Id
+            orderby i.CreatedAt descending
+            select new { i, p.Status, RunId = r.Id, r.ModuleId, r.WorkflowId, r.InputsJson })
+            .Take(capped)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows
+            .Select(x => new InboxItemWithContext(x.i, x.Status, x.RunId, x.ModuleId, x.WorkflowId, x.InputsJson ?? string.Empty))
+            .ToList();
+    }
 }

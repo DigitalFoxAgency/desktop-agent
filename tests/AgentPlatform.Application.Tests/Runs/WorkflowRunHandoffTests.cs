@@ -228,6 +228,9 @@ public sealed class WorkflowRunHandoffTests
         public Task<IReadOnlyList<InboxItem>> ListInboxAsync(Guid tenantId, Guid userId, int limit, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<InboxItem>>(Array.Empty<InboxItem>());
 
+        public Task<IReadOnlyList<InboxItemWithContext>> ListInboxWithContextAsync(Guid tenantId, Guid userId, int limit, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<InboxItemWithContext>>(Array.Empty<InboxItemWithContext>());
+
         public Task<AssignmentLookup?> GetCurrentAssignmentAsync(Guid tenantId, Guid phaseRunId, CancellationToken cancellationToken)
         {
             var phase = Run.Phases.FirstOrDefault(p => p.Id == phaseRunId);

@@ -14,6 +14,7 @@ import {
   type TenantUser,
 } from '../api/client';
 import {
+  clientLabel,
   isActiveStatus,
   isTerminalStatus,
   relativeTime,
@@ -56,7 +57,12 @@ export default function Run() {
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6">
         <div className="text-sm text-gray-500">{moduleName}</div>
-        <h1 className="text-2xl font-semibold leading-tight">{workflowName}</h1>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-semibold leading-tight">
+            {clientLabel(run.inputs) ?? workflowName}
+          </h1>
+          {clientLabel(run.inputs) && <span className="text-sm text-gray-500">· {workflowName}</span>}
+        </div>
         <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
           <span className={statusBadgeClass(run.status)}>{statusLabel(run.status)}</span>
           <span>·</span>
@@ -68,6 +74,18 @@ export default function Run() {
             </>
           )}
         </div>
+        {Object.keys(run.inputs ?? {}).length > 0 && (
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs">
+            {Object.entries(run.inputs).map(([k, v]) =>
+              v ? (
+                <div key={k} className="flex gap-1.5">
+                  <dt className="text-gray-500">{humanizeKey(k)}:</dt>
+                  <dd className="text-gray-800">{v}</dd>
+                </div>
+              ) : null,
+            )}
+          </dl>
+        )}
       </header>
 
       {waiting && waitingPhase && (
@@ -147,6 +165,15 @@ function buildPipeline(run: RunDetail, workflow: ModuleSummary['workflows'][numb
 function orderOf(defs: PhaseSummary[], d: PhaseSummary): number {
   // Workflows declare their phases in order — preserve declaration order.
   return defs.indexOf(d);
+}
+
+function humanizeKey(key: string): string {
+  const spaced = key
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
 function PipelineRow({

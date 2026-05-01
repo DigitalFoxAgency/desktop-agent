@@ -30,6 +30,9 @@ public interface IWorkflowRunRepository
 
     Task<IReadOnlyList<InboxItem>> ListInboxAsync(Guid tenantId, Guid userId, int limit, CancellationToken cancellationToken);
 
+    /// <summary>Inbox query enriched with the phase status and the parent run's id + inputs JSON, so the UI can filter active vs done items and label each row with the client.</summary>
+    Task<IReadOnlyList<InboxItemWithContext>> ListInboxWithContextAsync(Guid tenantId, Guid userId, int limit, CancellationToken cancellationToken);
+
     Task<AssignmentLookup?> GetCurrentAssignmentAsync(Guid tenantId, Guid phaseRunId, CancellationToken cancellationToken);
 
     /// <summary>Persists the in-place mutation of an existing <see cref="Assignment"/> row, plus an inbox item for the new assignee, plus the run status change. The assignments table has a unique constraint on <c>PhaseRunId</c>, so reassign mutates instead of inserting a new row.</summary>
@@ -41,3 +44,11 @@ public interface IWorkflowRunRepository
 }
 
 public sealed record AssignmentLookup(Assignment Assignment, Role RequiredRole, PhaseRun Phase, WorkflowRun Run);
+
+public sealed record InboxItemWithContext(
+    InboxItem Item,
+    RunStatus PhaseStatus,
+    Guid WorkflowRunId,
+    string ModuleId,
+    string WorkflowId,
+    string InputsJson);

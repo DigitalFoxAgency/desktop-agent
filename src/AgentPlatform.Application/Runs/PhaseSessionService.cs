@@ -143,11 +143,14 @@ public sealed class PhaseSessionService(
             Channel = channel,
             StartedAt = container.StartedAt,
         };
+        handle.LastEventAt = _clock.UtcNow;
+        handle.LastEventKind = "opened";
         _active[phaseRunId] = handle;
 
         var pumpCts = new CancellationTokenSource();
         _pumps[phaseRunId] = pumpCts;
         _ = Task.Run(() => PumpUsageAsync(handle, pumpCts.Token), pumpCts.Token);
+        _ = Task.Run(() => WatchIdleAsync(handle, pumpCts.Token), pumpCts.Token);
 
         await audit.WriteAsync(new AuditEntry
         {
@@ -200,12 +203,91 @@ public sealed class PhaseSessionService(
     public PhaseSessionHandle? GetActive(Guid phaseRunId)
         => _active.TryGetValue(phaseRunId, out var h) ? h : null;
 
+    public PhaseSessionDiagnostics? GetDiagnostics(Guid phaseRunId)
+    {
+        if (!_active.TryGetValue(phaseRunId, out var handle)) { return null; }
+        var now = _clock.UtcNow;
+        var idle = (int)Math.Max(0, (now - handle.LastEventAt).TotalSeconds);
+        var stalled = idle >= _opts.IdleStallSeconds;
+        return new PhaseSessionDiagnostics(
+            handle.PhaseRunId,
+            handle.StartedAt,
+            handle.LastEventAt,
+            handle.LastEventKind,
+            idle,
+            stalled);
+    }
+
+    private async Task WatchIdleAsync(PhaseSessionHandle handle, CancellationToken cancellationToken)
+    {
+        // Wakes every 30s and checks how long it's been since the bridge sent
+        // any event. If idle past the configured threshold, write an audit
+        // entry, log a warning, and pause the run so the UI can offer a
+        // restart affordance. Caught the silent semantics-phase stall on
+        // 2026-05-01 (E1 in known-issues.md).
+        if (_opts.IdleStallSeconds <= 0) { return; }
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
+                if (!_active.ContainsKey(handle.PhaseRunId)) { return; }
+                var idle = (_clock.UtcNow - handle.LastEventAt).TotalSeconds;
+                if (idle < _opts.IdleStallSeconds) { continue; }
+
+                _log.LogWarning(
+                    "Phase {PhaseRunId} idle for {Idle}s (last event: {Kind}) — pausing as stalled.",
+                    handle.PhaseRunId, (int)idle, handle.LastEventKind);
+
+                await using var scope = _scopes.CreateAsyncScope();
+                var audit = scope.ServiceProvider.GetRequiredService<IAuditLog>();
+                var runs = scope.ServiceProvider.GetRequiredService<IWorkflowRunRepository>();
+                try
+                {
+                    var run = await runs.GetAsync(handle.TenantId, handle.WorkflowRunId, CancellationToken.None).ConfigureAwait(false);
+                    if (run is not null && run.Status != RunStatus.Paused)
+                    {
+                        run.Status = RunStatus.Paused;
+                        await runs.AppendNextPhaseAsync(
+                            run.Phases.First(p => p.Id == handle.PhaseRunId),
+                            run,
+                            nextPhase: null,
+                            assignment: null,
+                            inboxItem: null,
+                            CancellationToken.None).ConfigureAwait(false);
+                    }
+                    await audit.WriteAsync(new AuditEntry
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantId = handle.TenantId,
+                        ActorUserId = null,
+                        Category = "phase",
+                        Action = "stalled",
+                        SubjectType = "phase_run",
+                        SubjectId = handle.PhaseRunId.ToString(),
+                        PayloadJson = JsonSerializer.Serialize(new { idleSeconds = (int)idle, lastEventKind = handle.LastEventKind }),
+                        OccurredAt = _clock.UtcNow,
+                    }, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, "Failed to mark phase {PhaseRunId} as stalled", handle.PhaseRunId);
+                }
+                await CloseAsync(handle.PhaseRunId, CancellationToken.None).ConfigureAwait(false);
+                return;
+            }
+        }
+        catch (OperationCanceledException) { /* phase closed */ }
+    }
+
     private async Task PumpUsageAsync(PhaseSessionHandle handle, CancellationToken cancellationToken)
     {
         try
         {
             await foreach (var evt in handle.Channel.ReadEventsAsync(cancellationToken).ConfigureAwait(false))
             {
+                handle.LastEventAt = _clock.UtcNow;
+                handle.LastEventKind = evt.GetType().Name;
                 if (evt is BridgeEvent.ConfirmationRequested confirmation)
                 {
                     await using var scope = _scopes.CreateAsyncScope();
@@ -448,4 +530,7 @@ public sealed class PhaseSessionOptions
 
     /// <summary>Dev/test toggle. When true, the per-run cost cap is skipped entirely — no <c>cost_cap_pause</c> audit is written, no run status mutation. Equivalent to setting <see cref="PerRunCostCapCents"/> to 0, but more explicit.</summary>
     public bool DisableCostCap { get; set; }
+
+    /// <summary>Number of seconds without any bridge event before a phase is considered stalled. The watchdog pauses the run + writes an audit row + closes the container. Set to 0 to disable. Default 600 (10 min).</summary>
+    public int IdleStallSeconds { get; set; } = 600;
 }

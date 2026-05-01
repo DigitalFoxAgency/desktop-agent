@@ -35,6 +35,9 @@ public static class RunEndpoints
                 r.Status,
                 r.StartedAt,
                 r.CompletedAt,
+                // Inputs the user supplied at start (e.g. niche / city / clientName)
+                // so the dashboard / inbox can surface a recognisable client label.
+                Inputs = ParseInputs(r.InputsJson),
             }));
         });
 
@@ -50,6 +53,7 @@ public static class RunEndpoints
                 run.Status,
                 run.StartedAt,
                 run.CompletedAt,
+                Inputs = ParseInputs(run.InputsJson),
                 Phases = run.Phases.OrderBy(p => p.Order).Select(p => new { p.Id, p.PhaseId, p.Order, p.Status }),
             });
         });
@@ -79,4 +83,29 @@ public static class RunEndpoints
     public sealed record StartRunDto(string ModuleId, string WorkflowId, Dictionary<string, string?>? Inputs);
 
     public sealed record AssignDto(Guid PhaseRunId, Guid UserId);
+
+    private static Dictionary<string, string?> ParseInputs(string? inputsJson)
+    {
+        if (string.IsNullOrWhiteSpace(inputsJson)) { return new Dictionary<string, string?>(); }
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(inputsJson);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+            {
+                return new Dictionary<string, string?>();
+            }
+            var result = new Dictionary<string, string?>(StringComparer.Ordinal);
+            foreach (var p in doc.RootElement.EnumerateObject())
+            {
+                result[p.Name] = p.Value.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? p.Value.GetString()
+                    : p.Value.GetRawText();
+            }
+            return result;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new Dictionary<string, string?>();
+        }
+    }
 }

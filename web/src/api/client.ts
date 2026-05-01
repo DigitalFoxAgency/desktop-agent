@@ -133,6 +133,9 @@ export interface RunListItem {
   status: number;
   startedAt: string;
   completedAt: string | null;
+  // User-supplied inputs at run start (e.g. niche / city / clientName). Used
+  // to label the run with its client.
+  inputs: Record<string, string | null>;
 }
 
 export const listRuns = () => api<RunListItem[]>('/api/runs');
@@ -162,6 +165,13 @@ export interface InboxItem {
   title: string;
   subtitle: string | null;
   createdAt: string;
+  // Enriched with the parent run + phase status so the UI can filter
+  // active vs done items and label each row with the client.
+  phaseStatus: number;
+  workflowRunId: string;
+  moduleId: string;
+  workflowId: string;
+  inputs: Record<string, string | null>;
 }
 
 export const listInbox = () => api<InboxItem[]>('/api/inbox');
@@ -210,6 +220,18 @@ export interface FileContent {
 export const getFile = (phaseRunId: string, path: string) =>
   api<FileContent>(`/api/phases/${phaseRunId}/files/content?path=${encodeURIComponent(path)}`);
 
+export interface PhaseDiagnostics {
+  phaseRunId: string;
+  openedAt: string;
+  lastEventAt: string;
+  lastEventKind: string;
+  idleSeconds: number;
+  isStalled: boolean;
+}
+
+export const getPhaseDiagnostics = (phaseRunId: string) =>
+  api<PhaseDiagnostics>(`/api/phases/${phaseRunId}/diagnostics`);
+
 export function getToken(): string | null {
   return localStorage.getItem('agp.token');
 }
@@ -234,6 +256,7 @@ export interface RunDetail {
   status: number;
   startedAt: string;
   completedAt: string | null;
+  inputs: Record<string, string | null>;
   phases: { id: string; phaseId: string; order: number; status: number }[];
 }
 

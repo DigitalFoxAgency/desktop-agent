@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { listRuns, listModules, type ModuleSummary } from '../api/client';
-import { statusBadgeClass, statusLabel, relativeTime } from '../format';
+import { clientLabel, statusBadgeClass, statusLabel, relativeTime } from '../format';
 
 export default function Dashboard() {
   const { data: runs, isLoading, error } = useQuery({
@@ -39,29 +39,32 @@ export default function Dashboard() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-600">
               <tr>
+                <th className="py-2 px-3 font-medium">Client</th>
                 <th className="py-2 px-3 font-medium">Workflow</th>
-                <th className="py-2 px-3 font-medium">Module</th>
                 <th className="py-2 px-3 font-medium">Status</th>
                 <th className="py-2 px-3 font-medium">Started</th>
                 <th className="py-2 px-3"></th>
               </tr>
             </thead>
             <tbody>
-              {runs.map((r) => (
-                <tr key={r.id} className="border-t hover:bg-gray-50">
-                  <td className="py-2 px-3 font-medium">{lookupWorkflowName(modules, r.moduleId, r.workflowId)}</td>
-                  <td className="py-2 px-3 text-gray-700">{lookupModuleName(modules, r.moduleId)}</td>
-                  <td className="py-2 px-3">
-                    <span className={statusBadgeClass(r.status)}>{statusLabel(r.status)}</span>
-                  </td>
-                  <td className="py-2 px-3 text-gray-600" title={new Date(r.startedAt).toLocaleString()}>
-                    {relativeTime(r.startedAt)}
-                  </td>
-                  <td className="py-2 px-3 text-right">
-                    <Link to={`/runs/${r.id}`} className="text-sm text-blue-600 hover:underline">Open →</Link>
-                  </td>
-                </tr>
-              ))}
+              {runs.map((r) => {
+                const client = clientLabel(r.inputs);
+                return (
+                  <tr key={r.id} className="border-t hover:bg-gray-50">
+                    <td className="py-2 px-3 font-medium">{client ?? <span className="text-gray-400">—</span>}</td>
+                    <td className="py-2 px-3 text-gray-700">{lookupWorkflowName(modules, r.moduleId, r.workflowId)}</td>
+                    <td className="py-2 px-3">
+                      <span className={statusBadgeClass(r.status)}>{statusLabel(r.status)}</span>
+                    </td>
+                    <td className="py-2 px-3 text-gray-600" title={new Date(r.startedAt).toLocaleString()}>
+                      {relativeTime(r.startedAt)}
+                    </td>
+                    <td className="py-2 px-3 text-right">
+                      <Link to={`/runs/${r.id}`} className="text-sm text-blue-600 hover:underline">Open →</Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

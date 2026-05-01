@@ -7,6 +7,7 @@ import ConfirmationDialog, { type PendingConfirmation } from '../components/Conf
 import {
   closePhase,
   getFile,
+  getPhaseDiagnostics,
   getRun,
   listModules,
   openPhase,
@@ -15,7 +16,7 @@ import {
   type RunDetail,
 } from '../api/client';
 import { connectPhase, type PhaseSocket } from '../api/ws';
-import { statusBadgeClass, statusLabel } from '../format';
+import { relativeTime, statusBadgeClass, statusLabel } from '../format';
 
 interface Orientation {
   workflowRunId: string;
@@ -57,6 +58,13 @@ export default function Phase() {
     queryFn: () => getRun(workflowRunId!),
     enabled: !!workflowRunId,
     refetchInterval: 10000,
+  });
+  const { data: diagnostics } = useQuery({
+    queryKey: ['phase-diagnostics', phaseRunId],
+    queryFn: () => getPhaseDiagnostics(phaseRunId!),
+    enabled: !!phaseRunId && opened,
+    refetchInterval: 15000,
+    retry: false,
   });
 
   const orientation: Orientation | null = useMemo(
@@ -244,6 +252,15 @@ export default function Phase() {
             )}
             {orientation.status !== null && (
               <span className={statusBadgeClass(orientation.status)}>{statusLabel(orientation.status)}</span>
+            )}
+            {diagnostics && (
+              <span
+                className={`text-xs ${diagnostics.isStalled ? 'text-amber-700 font-medium' : 'text-gray-500'}`}
+                title={`Last bridge event: ${diagnostics.lastEventKind} at ${new Date(diagnostics.lastEventAt).toLocaleTimeString()}`}
+              >
+                {diagnostics.isStalled ? '⚠ Stalled — ' : 'Last activity '}
+                {relativeTime(diagnostics.lastEventAt)}
+              </span>
             )}
           </div>
         </section>

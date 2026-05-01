@@ -72,3 +72,21 @@ export function isTerminalStatus(value: number | string | undefined | null): boo
   const k = statusKind(value);
   return k === 'completed' || k === 'failed';
 }
+
+// Best-effort human label for a run, derived from its inputs. The launchpad
+// uses `clientName`; future modules might use `name`/`title`/`subject`. Falls
+// back to a niche+city composite, then to nothing (caller decides).
+export function clientLabel(inputs: Record<string, string | null> | undefined): string | null {
+  if (!inputs) return null;
+  const tries = ['clientName', 'name', 'title', 'subject'];
+  for (const k of tries) {
+    const v = inputs[k];
+    if (v && v.trim()) return v.trim();
+  }
+  const niche = inputs.niche?.trim();
+  const city = inputs.city?.trim();
+  if (niche && city) return `${niche} · ${city}`;
+  if (niche) return niche;
+  if (city) return city;
+  return null;
+}
