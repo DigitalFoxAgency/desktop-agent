@@ -10,17 +10,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentPlatform.Infrastructure.Persistence.Postgres;
 
-public sealed class AgentPlatformDbContext : DbContext
+public sealed class AgentPlatformDbContext(
+    DbContextOptions<AgentPlatformDbContext> options,
+    IRequestTenantContext? tenantContext = null)
+    : DbContext(options)
 {
-    private readonly IRequestTenantContext? _tenantContext;
-
-    public AgentPlatformDbContext(
-        DbContextOptions<AgentPlatformDbContext> options,
-        IRequestTenantContext? tenantContext = null)
-        : base(options)
-    {
-        _tenantContext = tenantContext;
-    }
+    private readonly IRequestTenantContext? _tenantContext = tenantContext;
 
     public Guid CurrentTenantId =>
         _tenantContext is not null && _tenantContext.TryGetTenantId(out var t) ? t : Guid.Empty;

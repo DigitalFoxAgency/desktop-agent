@@ -60,19 +60,12 @@ public sealed class InboxConnectionRegistry
         if (_sendLocks.TryRemove(connId, out var gate)) { gate.Dispose(); }
     }
 
-    private sealed class Registration : IDisposable
+    private sealed class Registration(InboxConnectionRegistry owner, Guid userId, Guid connId) : IDisposable
     {
-        private readonly InboxConnectionRegistry _owner;
-        private readonly Guid _userId;
-        private readonly Guid _connId;
+        private readonly InboxConnectionRegistry _owner = owner;
+        private readonly Guid _userId = userId;
+        private readonly Guid _connId = connId;
         private bool _disposed;
-
-        public Registration(InboxConnectionRegistry owner, Guid userId, Guid connId)
-        {
-            _owner = owner;
-            _userId = userId;
-            _connId = connId;
-        }
 
         public void Dispose()
         {

@@ -4,11 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentPlatform.Infrastructure.Persistence.Postgres;
 
-public sealed class PostgresTenantRepository : ITenantRepository
+public sealed class PostgresTenantRepository(AgentPlatformDbContext db) : ITenantRepository
 {
-    private readonly AgentPlatformDbContext _db;
-
-    public PostgresTenantRepository(AgentPlatformDbContext db) => _db = db;
+    private readonly AgentPlatformDbContext _db = db;
 
     public async Task<Tenant> AddTenantAsync(Tenant tenant, CancellationToken cancellationToken)
     {

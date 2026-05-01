@@ -9,20 +9,14 @@ namespace AgentPlatform.Bridge.ClaudeWrapper;
 /// Drives `claude --output-format stream-json --input-format stream-json` and translates
 /// its NDJSON event stream into <see cref="ClaudeStreamEvent"/>s.
 /// </summary>
-public sealed class StreamJsonClaudeWrapper : IClaudeWrapper, IAsyncDisposable
+public sealed class StreamJsonClaudeWrapper(StreamJsonOptions opts, ILogger<StreamJsonClaudeWrapper> log) : IClaudeWrapper, IAsyncDisposable
 {
-    private readonly StreamJsonOptions _opts;
-    private readonly ILogger<StreamJsonClaudeWrapper> _log;
+    private readonly StreamJsonOptions _opts = opts;
+    private readonly ILogger<StreamJsonClaudeWrapper> _log = log;
     private readonly Channel<ClaudeStreamEvent> _events = Channel.CreateUnbounded<ClaudeStreamEvent>();
     private Process? _process;
     private Task? _stdoutReader;
     private Task? _stderrReader;
-
-    public StreamJsonClaudeWrapper(StreamJsonOptions opts, ILogger<StreamJsonClaudeWrapper> log)
-    {
-        _opts = opts;
-        _log = log;
-    }
 
     public Task StartAsync(ClaudeSessionSpec spec, CancellationToken cancellationToken)
     {

@@ -4,11 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentPlatform.Infrastructure.Persistence.Postgres;
 
-public sealed class PostgresAuditLog : IAuditLog
+public sealed class PostgresAuditLog(AgentPlatformDbContext db) : IAuditLog
 {
-    private readonly AgentPlatformDbContext _db;
-
-    public PostgresAuditLog(AgentPlatformDbContext db) => _db = db;
+    private readonly AgentPlatformDbContext _db = db;
 
     public async Task WriteAsync(AuditEntry entry, CancellationToken cancellationToken)
     {

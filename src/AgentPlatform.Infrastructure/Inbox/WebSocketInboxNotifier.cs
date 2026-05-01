@@ -6,11 +6,9 @@ namespace AgentPlatform.Infrastructure.Inbox;
 /// <summary>
 /// Pushes inbox events to the assignee's open <c>/ws/inbox</c> connections (if any).
 /// </summary>
-public sealed class WebSocketInboxNotifier : IInboxNotifier
+public sealed class WebSocketInboxNotifier(InboxConnectionRegistry registry) : IInboxNotifier
 {
-    private readonly InboxConnectionRegistry _registry;
-
-    public WebSocketInboxNotifier(InboxConnectionRegistry registry) => _registry = registry;
+    private readonly InboxConnectionRegistry _registry = registry;
 
     public Task NotifyAsync(InboxItem item, CancellationToken cancellationToken)
     {

@@ -4,11 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentPlatform.Infrastructure.Persistence.Postgres;
 
-public sealed class PostgresUsageMeter : IUsageMeter
+public sealed class PostgresUsageMeter(AgentPlatformDbContext db) : IUsageMeter
 {
-    private readonly AgentPlatformDbContext _db;
-
-    public PostgresUsageMeter(AgentPlatformDbContext db) => _db = db;
+    private readonly AgentPlatformDbContext _db = db;
 
     public async Task RecordAsync(UsageLedgerEntry entry, CancellationToken cancellationToken)
     {

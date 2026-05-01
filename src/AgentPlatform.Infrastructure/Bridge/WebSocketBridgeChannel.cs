@@ -208,6 +208,7 @@ public sealed class WebSocketBridgeChannel : IBridgeChannel, IDisposable
         "gitpush" => ActionClassification.GitPush,
         "installpackage" => ActionClassification.InstallPackage,
         "runshell" => ActionClassification.RunShell,
+        "buildclass" => ActionClassification.BuildClass,
         _ => ActionClassification.RunShell,
     };
 

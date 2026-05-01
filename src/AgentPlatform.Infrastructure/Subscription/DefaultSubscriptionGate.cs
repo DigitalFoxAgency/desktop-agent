@@ -5,18 +5,11 @@ using AgentPlatform.Application.Usage;
 
 namespace AgentPlatform.Infrastructure.Subscription;
 
-public sealed class DefaultSubscriptionGate : ISubscriptionGate
+public sealed class DefaultSubscriptionGate(ITenantRepository tenants, IUsageMeter usage, IClock clock) : ISubscriptionGate
 {
-    private readonly ITenantRepository _tenants;
-    private readonly IUsageMeter _usage;
-    private readonly IClock _clock;
-
-    public DefaultSubscriptionGate(ITenantRepository tenants, IUsageMeter usage, IClock clock)
-    {
-        _tenants = tenants;
-        _usage = usage;
-        _clock = clock;
-    }
+    private readonly ITenantRepository _tenants = tenants;
+    private readonly IUsageMeter _usage = usage;
+    private readonly IClock _clock = clock;
 
     public async Task<SubscriptionDecision> CheckAsync(Guid tenantId, CancellationToken cancellationToken)
     {

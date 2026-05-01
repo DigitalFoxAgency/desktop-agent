@@ -6,19 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace AgentPlatform.Infrastructure.Bridge;
 
-public sealed class BridgeConnectionRegistry : IBridgeChannelFactory, IDisposable
+public sealed class BridgeConnectionRegistry(ILoggerFactory loggerFactory) : IBridgeChannelFactory, IDisposable
 {
     private readonly ConcurrentDictionary<Guid, TaskCompletionSource<WebSocketBridgeChannel>> _waiters = new();
     private readonly ConcurrentDictionary<string, BridgeTokenBinding> _tokens = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<Guid, WebSocketBridgeChannel> _channels = new();
-    private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger<BridgeConnectionRegistry> _log;
-
-    public BridgeConnectionRegistry(ILoggerFactory loggerFactory)
-    {
-        _loggerFactory = loggerFactory;
-        _log = loggerFactory.CreateLogger<BridgeConnectionRegistry>();
-    }
+    private readonly ILoggerFactory _loggerFactory = loggerFactory;
+    private readonly ILogger<BridgeConnectionRegistry> _log = loggerFactory.CreateLogger<BridgeConnectionRegistry>();
 
     public string IssueConnectToken(Guid phaseRunId, Guid tenantId)
     {

@@ -3,6 +3,7 @@ using System.Text.Json;
 using AgentPlatform.Application.Abstractions;
 using AgentPlatform.Application.Bridge;
 using AgentPlatform.Application.Modules;
+using AgentPlatform.Application.Policies;
 using AgentPlatform.Application.RunContainers;
 using AgentPlatform.Application.Secrets;
 using AgentPlatform.Application.Usage;
@@ -14,34 +15,24 @@ using Microsoft.Extensions.Options;
 
 namespace AgentPlatform.Application.Runs;
 
-public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
+public sealed class PhaseSessionService(
+    IServiceScopeFactory scopes,
+    IRunContainerDriver driver,
+    IBridgeChannelFactory bridges,
+    IClock clock,
+    IOptions<PhaseSessionOptions> opts,
+    ILogger<PhaseSessionService> log) : IPhaseSessionService, IAsyncDisposable
 {
-    private readonly IServiceScopeFactory _scopes;
-    private readonly IRunContainerDriver _driver;
-    private readonly IBridgeChannelFactory _bridges;
-    private readonly IClock _clock;
-    private readonly ILogger<PhaseSessionService> _log;
-    private readonly PhaseSessionOptions _opts;
+    private readonly IServiceScopeFactory _scopes = scopes;
+    private readonly IRunContainerDriver _driver = driver;
+    private readonly IBridgeChannelFactory _bridges = bridges;
+    private readonly IClock _clock = clock;
+    private readonly ILogger<PhaseSessionService> _log = log;
+    private readonly PhaseSessionOptions _opts = opts.Value;
 
     private readonly ConcurrentDictionary<Guid, PhaseSessionHandle> _active = new();
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _pumps = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _openLocks = new();
-
-    public PhaseSessionService(
-        IServiceScopeFactory scopes,
-        IRunContainerDriver driver,
-        IBridgeChannelFactory bridges,
-        IClock clock,
-        IOptions<PhaseSessionOptions> opts,
-        ILogger<PhaseSessionService> log)
-    {
-        _scopes = scopes;
-        _driver = driver;
-        _bridges = bridges;
-        _clock = clock;
-        _opts = opts.Value;
-        _log = log;
-    }
 
     public async Task<OpenPhaseSessionResult> OpenAsync(Guid tenantId, Guid userId, Guid phaseRunId, CancellationToken cancellationToken)
     {
@@ -215,6 +206,29 @@ public sealed class PhaseSessionService : IPhaseSessionService, IAsyncDisposable
         {
             await foreach (var evt in handle.Channel.ReadEventsAsync(cancellationToken).ConfigureAwait(false))
             {
+                if (evt is BridgeEvent.ConfirmationRequested confirmation)
+                {
+                    await using var scope = _scopes.CreateAsyncScope();
+                    var confirms = scope.ServiceProvider.GetRequiredService<ConfirmationService>();
+                    try
+                    {
+                        await confirms.RecordProposalAsync(
+                            handle.TenantId,
+                            handle.PhaseRunId,
+                            requestedByUserId: null,
+                            confirmation.ConfirmationId,
+                            confirmation.Classification,
+                            confirmation.Summary,
+                            confirmation.TargetPath,
+                            confirmation.CommandLine,
+                            CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogError(ex, "Failed to persist confirmation {Id}", confirmation.ConfirmationId);
+                    }
+                    continue;
+                }
                 if (evt is BridgeEvent.PhaseCompleted completion)
                 {
                     await using var scope = _scopes.CreateAsyncScope();

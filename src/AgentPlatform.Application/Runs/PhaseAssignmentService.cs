@@ -6,16 +6,10 @@ using AgentPlatform.Domain.Tenants;
 
 namespace AgentPlatform.Application.Runs;
 
-public sealed class PhaseAssignmentService
+public sealed class PhaseAssignmentService(TenantService tenants, IClock clock)
 {
-    private readonly TenantService _tenants;
-    private readonly IClock _clock;
-
-    public PhaseAssignmentService(TenantService tenants, IClock clock)
-    {
-        _tenants = tenants;
-        _clock = clock;
-    }
+    private readonly TenantService _tenants = tenants;
+    private readonly IClock _clock = clock;
 
     public async Task<PhaseAssignmentResult> CreateAsync(
         Guid tenantId,

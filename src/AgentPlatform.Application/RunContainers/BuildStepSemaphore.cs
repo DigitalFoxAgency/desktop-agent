@@ -29,11 +29,9 @@ public sealed class BuildStepSemaphore : IDisposable
 
     public void Dispose() => _semaphore.Dispose();
 
-    private sealed class Releaser : IDisposable
+    private sealed class Releaser(SemaphoreSlim semaphore) : IDisposable
     {
-        private SemaphoreSlim? _semaphore;
-
-        public Releaser(SemaphoreSlim semaphore) => _semaphore = semaphore;
+        private SemaphoreSlim? _semaphore = semaphore;
 
         public void Dispose()
         {

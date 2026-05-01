@@ -9,13 +9,11 @@ namespace AgentPlatform.Bridge.ClaudeWrapper;
 /// reports synthetic token usage. <see cref="SendInputAsync"/> echoes user input back.
 /// No Anthropic API call. Selected via <c>AGP_MOCK=1</c>.
 /// </summary>
-public sealed class MockClaudeWrapper : IClaudeWrapper
+public sealed class MockClaudeWrapper(ILogger<MockClaudeWrapper> log) : IClaudeWrapper
 {
     private readonly Channel<ClaudeStreamEvent> _events = Channel.CreateUnbounded<ClaudeStreamEvent>();
-    private readonly ILogger<MockClaudeWrapper> _log;
+    private readonly ILogger<MockClaudeWrapper> _log = log;
     private string _workingDir = "/workspace";
-
-    public MockClaudeWrapper(ILogger<MockClaudeWrapper> log) => _log = log;
 
     public async Task StartAsync(ClaudeSessionSpec spec, CancellationToken cancellationToken)
     {

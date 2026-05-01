@@ -10,12 +10,9 @@ namespace AgentPlatform.Api.Tests.Integration;
 /// End-to-end US1 acceptance: signup → signin → add engineer → start onboard-client → engineer's inbox shows init.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public sealed class StartWorkflowFlowTests
+public sealed class StartWorkflowFlowTests(ApiFactory factory)
 {
-    private readonly ApiFactory _factory;
-
-    public StartWorkflowFlowTests(ApiFactory factory) => _factory = factory;
-
+    private readonly ApiFactory _factory = factory;
     [Fact]
     public async Task Full_flow_signup_to_engineer_inbox()
     {

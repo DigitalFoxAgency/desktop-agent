@@ -3,11 +3,9 @@ using Microsoft.AspNetCore.Identity;
 
 namespace AgentPlatform.Api.Auth;
 
-public sealed class IdentityAuthBackend : IAuthBackend
+public sealed class IdentityAuthBackend(UserManager<ApplicationUser> users) : IAuthBackend
 {
-    private readonly UserManager<ApplicationUser> _users;
-
-    public IdentityAuthBackend(UserManager<ApplicationUser> users) => _users = users;
+    private readonly UserManager<ApplicationUser> _users = users;
 
     public async Task<AuthBackendResult> CreateUserAsync(Guid tenantId, string email, string password, string displayName, CancellationToken cancellationToken)
     {

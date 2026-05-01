@@ -8,9 +8,8 @@ namespace AgentPlatform.Api.Auth;
 /// Email + password identity, no external providers. Identity tables live in their own
 /// `identity` schema to keep them out of the agency domain schema.
 /// </summary>
-public sealed class IdentityDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options) : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
-    public IdentityDbContext(DbContextOptions<IdentityDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

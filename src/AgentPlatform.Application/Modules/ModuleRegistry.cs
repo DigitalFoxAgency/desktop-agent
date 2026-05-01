@@ -13,17 +13,11 @@ namespace AgentPlatform.Application.Modules;
 /// (and on demand via <see cref="RefreshAsync"/>). Manifests that violate the schema
 /// or declare an unknown <c>schemaVersion</c> are surfaced as <see cref="ModuleStatus.Unavailable"/>.
 /// </summary>
-public sealed class ModuleRegistry : IModuleRegistry
+public sealed class ModuleRegistry(IModuleSource source, IClock clock) : IModuleRegistry
 {
-    private readonly IModuleSource _source;
-    private readonly IClock _clock;
+    private readonly IModuleSource _source = source;
+    private readonly IClock _clock = clock;
     private ConcurrentDictionary<string, Module> _byModuleId = new();
-
-    public ModuleRegistry(IModuleSource source, IClock clock)
-    {
-        _source = source;
-        _clock = clock;
-    }
 
     public Task<IReadOnlyList<Module>> ListAsync(CancellationToken cancellationToken)
     {

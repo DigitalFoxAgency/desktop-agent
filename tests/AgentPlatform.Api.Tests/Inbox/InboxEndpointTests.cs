@@ -7,12 +7,9 @@ using Xunit;
 namespace AgentPlatform.Api.Tests.Inbox;
 
 [Collection(ApiCollection.Name)]
-public sealed class InboxEndpointTests
+public sealed class InboxEndpointTests(ApiFactory factory)
 {
-    private readonly ApiFactory _factory;
-
-    public InboxEndpointTests(ApiFactory factory) => _factory = factory;
-
+    private readonly ApiFactory _factory = factory;
     [Fact]
     public async Task Get_inbox_returns_empty_for_new_user()
     {

@@ -12,16 +12,10 @@ namespace AgentPlatform.Api.HostedServices;
 /// relational database creator since EnsureCreated short-circuits when the agency
 /// migration has already populated the database).
 /// </summary>
-public sealed class DatabaseMigrator : IHostedService
+public sealed class DatabaseMigrator(IServiceProvider services, ILogger<DatabaseMigrator> logger) : IHostedService
 {
-    private readonly IServiceProvider _services;
-    private readonly ILogger<DatabaseMigrator> _logger;
-
-    public DatabaseMigrator(IServiceProvider services, ILogger<DatabaseMigrator> logger)
-    {
-        _services = services;
-        _logger = logger;
-    }
+    private readonly IServiceProvider _services = services;
+    private readonly ILogger<DatabaseMigrator> _logger = logger;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {

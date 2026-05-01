@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ChatPane, { type ChatMessage } from '../components/ChatPane';
 import FileTree from '../components/FileTree';
+import ConfirmationDialog, { type PendingConfirmation } from '../components/ConfirmationDialog';
 import { closePhase, openPhase } from '../api/client';
 import { connectPhase, type PhaseSocket } from '../api/ws';
 
@@ -16,6 +17,8 @@ export default function Phase() {
   const [opened, setOpened] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [thinking, setThinking] = useState(false);
+  const [pendingConfirms, setPendingConfirms] = useState<PendingConfirmation[]>([]);
+  const [waitingBuilds, setWaitingBuilds] = useState<Set<string>>(() => new Set());
   const socketRef = useRef<PhaseSocket | null>(null);
   const assistantBufferRef = useRef<string>('');
 
@@ -45,6 +48,36 @@ export default function Phase() {
                 break;
               case 'token_usage':
                 setUsage({ input: evt.inputTokens, output: evt.outputTokens });
+                break;
+              case 'confirmation_request':
+                setPendingConfirms((prev) => {
+                  if (prev.some((p) => p.confirmationId === evt.confirmationId)) return prev;
+                  return [
+                    ...prev,
+                    {
+                      confirmationId: evt.confirmationId,
+                      classification: evt.classification,
+                      summary: evt.summary,
+                      targetPath: evt.targetPath,
+                      commandLine: evt.commandLine,
+                    },
+                  ];
+                });
+                break;
+              case 'build_semaphore_waiting':
+                setWaitingBuilds((prev) => {
+                  const next = new Set(prev);
+                  next.add(evt.confirmationId);
+                  return next;
+                });
+                break;
+              case 'build_semaphore_acquired':
+                setWaitingBuilds((prev) => {
+                  if (!prev.has(evt.confirmationId)) return prev;
+                  const next = new Set(prev);
+                  next.delete(evt.confirmationId);
+                  return next;
+                });
                 break;
               case 'phase_completed':
                 setMessages((prev) => [
@@ -82,6 +115,13 @@ export default function Phase() {
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'user', text }]);
     setThinking(true);
     socketRef.current.send(text);
+  }, []);
+
+  const decideConfirmation = useMemo(() => (confirmationId: string, confirmed: boolean, note: string | null) => {
+    const sock = socketRef.current;
+    if (!sock) return;
+    sock.decide(confirmationId, confirmed, note ?? undefined);
+    setPendingConfirms((prev) => prev.filter((p) => p.confirmationId !== confirmationId));
   }, []);
 
   async function leave() {
@@ -127,6 +167,11 @@ export default function Phase() {
           </button>
         </div>
       ) : null}
+      {waitingBuilds.size > 0 && (
+        <div className="bg-blue-50 text-blue-900 text-xs px-4 py-2 border-b border-blue-200">
+          Waiting for build slot ({waitingBuilds.size} queued, host cap = 2)…
+        </div>
+      )}
       <main className="flex-1 grid grid-cols-[1fr_320px] gap-4 p-4 min-h-0">
         <ChatPane messages={messages} onSend={sendUser} disabled={!connected} thinking={thinking} />
         {phaseRunId && opened ? (
@@ -137,6 +182,7 @@ export default function Phase() {
           </div>
         )}
       </main>
+      <ConfirmationDialog pending={pendingConfirms} onDecide={decideConfirmation} />
     </div>
   );
 }

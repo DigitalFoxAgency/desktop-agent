@@ -16,16 +16,10 @@ public sealed class JwtOptions
     public int LifetimeMinutes { get; set; } = 480;
 }
 
-public sealed class JwtIssuer
+public sealed class JwtIssuer(JwtOptions options, IClock clock)
 {
-    private readonly JwtOptions _options;
-    private readonly IClock _clock;
-
-    public JwtIssuer(JwtOptions options, IClock clock)
-    {
-        _options = options;
-        _clock = clock;
-    }
+    private readonly JwtOptions _options = options;
+    private readonly IClock _clock = clock;
 
     public string Issue(Guid tenantId, Guid userId, string email, IEnumerable<Role> roles)
     {

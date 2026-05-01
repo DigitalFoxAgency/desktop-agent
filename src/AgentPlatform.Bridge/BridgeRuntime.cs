@@ -1,10 +1,13 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using AgentPlatform.Application.Policies;
+using AgentPlatform.Application.RunContainers;
 using AgentPlatform.Bridge.ClaudeWrapper;
 using AgentPlatform.Bridge.Config;
 using AgentPlatform.Bridge.FileWatcher;
 using AgentPlatform.Bridge.PhaseCompletion;
+using AgentPlatform.Bridge.PolicyBridge;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,6 +27,9 @@ public sealed class BridgeRuntime : BackgroundService
     private readonly IClaudeWrapper _wrapper;
     private readonly ILogger<BridgeRuntime> _log;
     private readonly IHostApplicationLifetime _lifetime;
+    private readonly ConfirmationGate _confirmGate = new();
+    private readonly BuildStepSemaphore _buildSemaphore = new();
+    private readonly IntentInterceptor _interceptor;
 
     public BridgeRuntime(
         IOptions<BridgeOptions> opts,
@@ -35,6 +41,9 @@ public sealed class BridgeRuntime : BackgroundService
         _wrapper = wrapper;
         _log = log;
         _lifetime = lifetime;
+        var moduleId = string.IsNullOrWhiteSpace(_opts.ModuleDir) ? null : Path.GetFileName(_opts.ModuleDir.TrimEnd('/'));
+        var classifier = new ActionClassifier(new DefaultPolicyEngine(), moduleId, phaseId: _opts.Skill);
+        _interceptor = new IntentInterceptor(classifier, _confirmGate, _buildSemaphore);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -168,14 +177,7 @@ public sealed class BridgeRuntime : BackgroundService
                         }).ConfigureAwait(false);
                         break;
                     case ClaudeStreamEvent.ToolUseProposed tup:
-                        // Phase 6 (US4) replaces this passthrough with policy-driven confirmation requests.
-                        await SendFrame(new
-                        {
-                            type = "tool_use",
-                            tool = tup.ToolName,
-                            commandLine = tup.CommandLine,
-                            targetPath = tup.TargetPath,
-                        }).ConfigureAwait(false);
+                        await HandleToolUseAsync(tup, SendFrame, cancellationToken).ConfigureAwait(false);
                         break;
                     case ClaudeStreamEvent.SessionExited:
                         completion.SignalSessionExited();
@@ -213,6 +215,109 @@ public sealed class BridgeRuntime : BackgroundService
         await Task.WhenAll(claudeTask, fileTask, completionTask).ConfigureAwait(false);
     }
 
+    private async Task HandleToolUseAsync(
+        ClaudeStreamEvent.ToolUseProposed tup,
+        Func<object, Task> sendFrame,
+        CancellationToken cancellationToken)
+    {
+        InterceptionResult result;
+        try
+        {
+            result = await _interceptor.InspectAsync(tup, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "IntentInterceptor failed; passing tool through");
+            await sendFrame(new
+            {
+                type = "tool_use",
+                tool = tup.ToolName,
+                commandLine = tup.CommandLine,
+                targetPath = tup.TargetPath,
+            }).ConfigureAwait(false);
+            return;
+        }
+
+        if (!result.ConfirmationRequired)
+        {
+            await sendFrame(new
+            {
+                type = "tool_use",
+                tool = tup.ToolName,
+                commandLine = tup.CommandLine,
+                targetPath = tup.TargetPath,
+            }).ConfigureAwait(false);
+            return;
+        }
+
+        // Emit the confirmation request frame; the API persists it and
+        // surfaces it in the web UI. The bridge waits for the matching
+        // confirmation_decision frame via _confirmGate before continuing.
+        await sendFrame(new
+        {
+            type = "confirmation_request",
+            confirmationId = result.ConfirmationId,
+            classification = result.Decision.Classification.ToString(),
+            summary = result.Summary,
+            targetPath = result.TargetPath,
+            commandLine = result.CommandLine,
+            reason = result.Decision.Reason,
+        }).ConfigureAwait(false);
+
+        ConfirmationOutcome outcome;
+        try
+        {
+            outcome = await _confirmGate.WaitForDecisionAsync(result.ConfirmationId!.Value, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (outcome.Confirmed && result.Decision.RequiresBuildSemaphore)
+        {
+            // Build-class action: gate behind the host-wide cap of 2 concurrent
+            // builds. While waiting we surface a "waiting" frame so the web UI
+            // can render a spinner and the user knows nothing's stuck.
+            await sendFrame(new
+            {
+                type = "build_semaphore_waiting",
+                confirmationId = result.ConfirmationId,
+            }).ConfigureAwait(false);
+
+            using var slot = await _buildSemaphore.AcquireAsync(cancellationToken).ConfigureAwait(false);
+            await sendFrame(new
+            {
+                type = "build_semaphore_acquired",
+                confirmationId = result.ConfirmationId,
+            }).ConfigureAwait(false);
+            await ResumeWrapperAsync(outcome, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await ResumeWrapperAsync(outcome, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task ResumeWrapperAsync(ConfirmationOutcome outcome, CancellationToken cancellationToken)
+    {
+        // Until claude's stream-json permission protocol is wired through the
+        // wrapper, surface the user's decision back into the conversation as a
+        // synthetic user message. Confirmed → claude proceeds; declined →
+        // claude is told to skip the action gracefully.
+        var note = string.IsNullOrWhiteSpace(outcome.Note) ? string.Empty : $" (note: {outcome.Note})";
+        var message = outcome.Confirmed
+            ? $"[platform] User confirmed the proposed action — proceed.{note}"
+            : $"[platform] User declined the proposed action — skip it and continue with the rest of the plan.{note}";
+        try
+        {
+            await _wrapper.SendInputAsync(message, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Failed to forward confirmation outcome to wrapper");
+        }
+    }
+
     private async Task ReadIncomingAsync(ClientWebSocket ws, CancellationToken cancellationToken)
     {
         var buffer = new byte[8 * 1024];
@@ -243,7 +348,18 @@ public sealed class BridgeRuntime : BackgroundService
                 {
                     await _wrapper.SendInputAsync(text.GetString() ?? string.Empty, cancellationToken).ConfigureAwait(false);
                 }
-                // Phase 6 will dispatch confirmation_decision frames into the policy bridge.
+                else if (t == "confirmation_decision"
+                    && doc.RootElement.TryGetProperty("confirmationId", out var idProp)
+                    && doc.RootElement.TryGetProperty("confirmed", out var confirmedProp))
+                {
+                    var id = idProp.GetGuid();
+                    var confirmed = confirmedProp.GetBoolean();
+                    var note = doc.RootElement.TryGetProperty("note", out var n) ? n.GetString() : null;
+                    if (!_confirmGate.Resolve(id, confirmed, note))
+                    {
+                        _log.LogWarning("Confirmation decision for unknown id {Id}", id);
+                    }
+                }
             }
             catch (JsonException ex)
             {

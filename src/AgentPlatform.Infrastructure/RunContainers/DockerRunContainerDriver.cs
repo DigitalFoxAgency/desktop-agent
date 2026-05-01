@@ -5,23 +5,15 @@ using Microsoft.Extensions.Logging;
 
 namespace AgentPlatform.Infrastructure.RunContainers;
 
-public sealed class DockerRunContainerDriver : IRunContainerDriver, IDisposable
+public sealed class DockerRunContainerDriver(
+    RunVolumeManager volumes,
+    DockerDriverOptions opts,
+    ILogger<DockerRunContainerDriver> log) : IRunContainerDriver, IDisposable
 {
-    private readonly DockerClient _docker;
-    private readonly RunVolumeManager _volumes;
-    private readonly DockerDriverOptions _opts;
-    private readonly ILogger<DockerRunContainerDriver> _log;
-
-    public DockerRunContainerDriver(
-        RunVolumeManager volumes,
-        DockerDriverOptions opts,
-        ILogger<DockerRunContainerDriver> log)
-    {
-        _volumes = volumes;
-        _opts = opts;
-        _log = log;
-        _docker = new DockerClientConfiguration(new Uri(opts.DockerEndpoint)).CreateClient();
-    }
+    private readonly DockerClient _docker = new DockerClientConfiguration(new Uri(opts.DockerEndpoint)).CreateClient();
+    private readonly RunVolumeManager _volumes = volumes;
+    private readonly DockerDriverOptions _opts = opts;
+    private readonly ILogger<DockerRunContainerDriver> _log = log;
 
     public async Task EnsureVolumeAsync(string runId, CancellationToken cancellationToken)
         => await _volumes.EnsureAsync(runId, cancellationToken).ConfigureAwait(false);

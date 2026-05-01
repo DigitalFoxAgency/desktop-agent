@@ -5,11 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentPlatform.Infrastructure.Persistence.Postgres;
 
-public sealed class PostgresWorkflowRunRepository : IWorkflowRunRepository
+public sealed class PostgresWorkflowRunRepository(AgentPlatformDbContext db) : IWorkflowRunRepository
 {
-    private readonly AgentPlatformDbContext _db;
-
-    public PostgresWorkflowRunRepository(AgentPlatformDbContext db) => _db = db;
+    private readonly AgentPlatformDbContext _db = db;
 
     public async Task SaveNewRunAsync(
         WorkflowRun run,

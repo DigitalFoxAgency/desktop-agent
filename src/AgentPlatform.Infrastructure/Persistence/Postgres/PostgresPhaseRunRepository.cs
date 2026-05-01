@@ -4,11 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentPlatform.Infrastructure.Persistence.Postgres;
 
-public sealed class PostgresPhaseRunRepository : IPhaseRunRepository
+public sealed class PostgresPhaseRunRepository(AgentPlatformDbContext db) : IPhaseRunRepository
 {
-    private readonly AgentPlatformDbContext _db;
-
-    public PostgresPhaseRunRepository(AgentPlatformDbContext db) => _db = db;
+    private readonly AgentPlatformDbContext _db = db;
 
     public async Task<PhaseRunWithRun?> GetAsync(Guid tenantId, Guid phaseRunId, CancellationToken cancellationToken)
     {

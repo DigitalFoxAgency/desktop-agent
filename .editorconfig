@@ -34,6 +34,7 @@ dotnet_naming_style.i_prefix.capitalization = pascal_case
 
 # Promote a few code-quality analyzers to errors per Constitution I.
 dotnet_diagnostic.IDE0005.severity = warning   # unused usings
+dotnet_diagnostic.IDE0290.severity = warning   # Use primary constructor
 dotnet_diagnostic.CA1063.severity = warning   # IDisposable
 dotnet_diagnostic.CA2007.severity = none      # ConfigureAwait — server-side, not needed
 dotnet_diagnostic.CA1848.severity = none      # logger.Log... performance — not blocking

@@ -11,42 +11,28 @@ using AgentPlatform.Domain.Tenants;
 
 namespace AgentPlatform.Application.Runs;
 
-public sealed class WorkflowRunService
+public sealed class WorkflowRunService(
+    IModuleRegistry modules,
+    ISubscriptionGate subscription,
+    IWorkflowRunRepository repo,
+    PhaseAssignmentService assignments,
+    IAuditLog audit,
+    IInboxNotifier notifier,
+    IWorkingDirectoryProvider workingDir,
+    TenantService tenants,
+    IRunContainerDriver containers,
+    IClock clock)
 {
-    private readonly IModuleRegistry _modules;
-    private readonly ISubscriptionGate _subscription;
-    private readonly IWorkflowRunRepository _repo;
-    private readonly PhaseAssignmentService _assignments;
-    private readonly IAuditLog _audit;
-    private readonly IInboxNotifier _notifier;
-    private readonly IWorkingDirectoryProvider _workingDir;
-    private readonly TenantService _tenants;
-    private readonly IRunContainerDriver _containers;
-    private readonly IClock _clock;
-
-    public WorkflowRunService(
-        IModuleRegistry modules,
-        ISubscriptionGate subscription,
-        IWorkflowRunRepository repo,
-        PhaseAssignmentService assignments,
-        IAuditLog audit,
-        IInboxNotifier notifier,
-        IWorkingDirectoryProvider workingDir,
-        TenantService tenants,
-        IRunContainerDriver containers,
-        IClock clock)
-    {
-        _modules = modules;
-        _subscription = subscription;
-        _repo = repo;
-        _assignments = assignments;
-        _audit = audit;
-        _notifier = notifier;
-        _workingDir = workingDir;
-        _tenants = tenants;
-        _containers = containers;
-        _clock = clock;
-    }
+    private readonly IModuleRegistry _modules = modules;
+    private readonly ISubscriptionGate _subscription = subscription;
+    private readonly IWorkflowRunRepository _repo = repo;
+    private readonly PhaseAssignmentService _assignments = assignments;
+    private readonly IAuditLog _audit = audit;
+    private readonly IInboxNotifier _notifier = notifier;
+    private readonly IWorkingDirectoryProvider _workingDir = workingDir;
+    private readonly TenantService _tenants = tenants;
+    private readonly IRunContainerDriver _containers = containers;
+    private readonly IClock _clock = clock;
 
     public async Task<StartRunResult> StartAsync(StartRunRequest request, CancellationToken cancellationToken)
     {

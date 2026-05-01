@@ -7,12 +7,9 @@ using Xunit;
 namespace AgentPlatform.Api.Tests.Modules;
 
 [Collection(ApiCollection.Name)]
-public sealed class ModuleCatalogueTests
+public sealed class ModuleCatalogueTests(ApiFactory factory)
 {
-    private readonly ApiFactory _factory;
-
-    public ModuleCatalogueTests(ApiFactory factory) => _factory = factory;
-
+    private readonly ApiFactory _factory = factory;
     [Fact]
     public async Task Get_modules_requires_auth()
     {

@@ -7,12 +7,9 @@ using Xunit;
 namespace AgentPlatform.Api.Tests.Auth;
 
 [Collection(ApiCollection.Name)]
-public sealed class AuthEndpointTests
+public sealed class AuthEndpointTests(ApiFactory factory)
 {
-    private readonly ApiFactory _factory;
-
-    public AuthEndpointTests(ApiFactory factory) => _factory = factory;
-
+    private readonly ApiFactory _factory = factory;
     [Fact]
     public async Task Signup_then_signin_returns_token()
     {

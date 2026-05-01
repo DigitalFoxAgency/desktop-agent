@@ -5,16 +5,10 @@ namespace AgentPlatform.Api.HostedServices;
 /// <summary>
 /// Loads installed modules from disk on startup. T093.
 /// </summary>
-public sealed class ModuleRegistrySeeder : IHostedService
+public sealed class ModuleRegistrySeeder(IModuleRegistry registry, ILogger<ModuleRegistrySeeder> logger) : IHostedService
 {
-    private readonly IModuleRegistry _registry;
-    private readonly ILogger<ModuleRegistrySeeder> _logger;
-
-    public ModuleRegistrySeeder(IModuleRegistry registry, ILogger<ModuleRegistrySeeder> logger)
-    {
-        _registry = registry;
-        _logger = logger;
-    }
+    private readonly IModuleRegistry _registry = registry;
+    private readonly ILogger<ModuleRegistrySeeder> _logger = logger;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {

@@ -200,13 +200,11 @@ public sealed class WorkflowRunHandoffTests
         }
     }
 
-    private sealed class InMemoryRunRepo : IWorkflowRunRepository
+    private sealed class InMemoryRunRepo(WorkflowRun run) : IWorkflowRunRepository
     {
-        public WorkflowRun Run { get; }
+        public WorkflowRun Run { get; } = run;
         public AppendCall? Append { get; private set; }
         public Assignment? CurrentAssignment { get; private set; }
-
-        public InMemoryRunRepo(WorkflowRun run) { Run = run; }
 
         public Task<WorkflowRun?> GetAsync(Guid tenantId, Guid runId, CancellationToken cancellationToken)
             => Task.FromResult<WorkflowRun?>(Run.Id == runId ? Run : null);

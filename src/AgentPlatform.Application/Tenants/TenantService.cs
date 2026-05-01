@@ -3,16 +3,10 @@ using AgentPlatform.Domain.Tenants;
 
 namespace AgentPlatform.Application.Tenants;
 
-public sealed class TenantService
+public sealed class TenantService(ITenantRepository repo, IClock clock)
 {
-    private readonly ITenantRepository _repo;
-    private readonly IClock _clock;
-
-    public TenantService(ITenantRepository repo, IClock clock)
-    {
-        _repo = repo;
-        _clock = clock;
-    }
+    private readonly ITenantRepository _repo = repo;
+    private readonly IClock _clock = clock;
 
     public async Task<Tenant> CreateTenantAsync(string name, string slug, CancellationToken cancellationToken)
     {

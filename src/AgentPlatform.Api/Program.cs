@@ -9,6 +9,7 @@ using AgentPlatform.Application.Auth;
 using AgentPlatform.Application.Bridge;
 using AgentPlatform.Application.Common;
 using AgentPlatform.Application.Modules;
+using AgentPlatform.Application.Policies;
 using AgentPlatform.Application.RunContainers;
 using AgentPlatform.Application.Runs;
 using AgentPlatform.Application.Secrets;
@@ -79,6 +80,9 @@ builder.Services.AddScoped<WorkflowRunService>();
 builder.Services.AddScoped<IAuthBackend, IdentityAuthBackend>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IPhaseRunRepository, PostgresPhaseRunRepository>();
+builder.Services.AddScoped<IConfirmationRepository, PostgresConfirmationRepository>();
+builder.Services.AddScoped<ConfirmationService>();
+builder.Services.AddSingleton<IPolicyEngine, DefaultPolicyEngine>();
 
 builder.Services.Configure<PhaseSessionOptions>(builder.Configuration.GetSection("AgentPlatform:PhaseSession"));
 
@@ -156,6 +160,7 @@ app.MapModuleEndpoints();
 app.MapRunEndpoints();
 app.MapInboxEndpoints();
 app.MapPhaseEndpoints();
+app.MapConfirmationEndpoints();
 app.MapBridgeHub();
 app.MapPhaseSessionHub();
 app.MapInboxHub();

@@ -170,14 +170,9 @@ public sealed class PhaseSessionServiceTests
         }
     }
 
-    private sealed class InMemoryPhaseRepo : IPhaseRunRepository
+    private sealed class InMemoryPhaseRepo(IEnumerable<(PhaseRun phase, WorkflowRun run)> rows) : IPhaseRunRepository
     {
-        private readonly Dictionary<Guid, PhaseRunWithRun> _byPhase;
-
-        public InMemoryPhaseRepo(IEnumerable<(PhaseRun phase, WorkflowRun run)> rows)
-        {
-            _byPhase = rows.ToDictionary(t => t.phase.Id, t => new PhaseRunWithRun(t.phase, t.run));
-        }
+        private readonly Dictionary<Guid, PhaseRunWithRun> _byPhase = rows.ToDictionary(t => t.phase.Id, t => new PhaseRunWithRun(t.phase, t.run));
 
         public Task<PhaseRunWithRun?> GetAsync(Guid tenantId, Guid phaseRunId, CancellationToken cancellationToken)
             => Task.FromResult(_byPhase.TryGetValue(phaseRunId, out var v) ? v : null);

@@ -7,12 +7,9 @@ using Xunit;
 namespace AgentPlatform.Api.Tests.Runs;
 
 [Collection(ApiCollection.Name)]
-public sealed class StartRunTests
+public sealed class StartRunTests(ApiFactory factory)
 {
-    private readonly ApiFactory _factory;
-
-    public StartRunTests(ApiFactory factory) => _factory = factory;
-
+    private readonly ApiFactory _factory = factory;
     [Fact]
     public async Task Post_runs_starts_run_and_returns_runId()
     {

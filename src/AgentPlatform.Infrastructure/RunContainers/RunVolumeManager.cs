@@ -2,16 +2,10 @@ using Microsoft.Extensions.Logging;
 
 namespace AgentPlatform.Infrastructure.RunContainers;
 
-public sealed class RunVolumeManager
+public sealed class RunVolumeManager(RunVolumeOptions opts, ILogger<RunVolumeManager> log)
 {
-    private readonly RunVolumeOptions _opts;
-    private readonly ILogger<RunVolumeManager> _log;
-
-    public RunVolumeManager(RunVolumeOptions opts, ILogger<RunVolumeManager> log)
-    {
-        _opts = opts;
-        _log = log;
-    }
+    private readonly RunVolumeOptions _opts = opts;
+    private readonly ILogger<RunVolumeManager> _log = log;
 
     public string ResolveHostPath(string runId)
     {

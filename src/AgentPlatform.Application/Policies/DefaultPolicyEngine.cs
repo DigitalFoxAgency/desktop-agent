@@ -2,14 +2,34 @@ using AgentPlatform.Domain.Policies;
 
 namespace AgentPlatform.Application.Policies;
 
-public sealed class DefaultPolicyEngine : IPolicyEngine
+public sealed class DefaultPolicyEngine(IModulePolicyResolver? moduleOverrides = null) : IPolicyEngine
 {
     private static readonly string[] DeleteShellTokens = { "rm", "rmdir", "unlink" };
     private static readonly string[] PackageManagers = { "npm", "pnpm", "yarn", "pip", "uv", "poetry", "dotnet" };
 
-    public Task<PolicyDecision> ClassifyAsync(IntentDescriptor intent, CancellationToken cancellationToken)
+    private readonly IModulePolicyResolver? _moduleOverrides = moduleOverrides;
+
+    public async Task<PolicyDecision> ClassifyAsync(IntentDescriptor intent, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(intent);
+        var baseline = await ClassifyBaselineAsync(intent, cancellationToken).ConfigureAwait(false);
+        if (_moduleOverrides is null || string.IsNullOrEmpty(intent.ModuleId) || baseline.Classification == ActionClassification.Safe)
+        {
+            return baseline;
+        }
+        var overrides = await _moduleOverrides.GetAsync(intent.ModuleId, cancellationToken).ConfigureAwait(false);
+        if (overrides.TryGet(baseline.Classification, out var moduleClassification))
+        {
+            // Module-declared "safe" suppresses confirmation; "dangerous" preserves it.
+            var requiresConfirmation = moduleClassification != "safe";
+            return baseline with { RequiresConfirmation = requiresConfirmation, Reason = $"{baseline.Reason} (module override: {moduleClassification})" };
+        }
+        return baseline;
+    }
+
+    private static Task<PolicyDecision> ClassifyBaselineAsync(IntentDescriptor intent, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
 
         if (string.Equals(intent.Tool, "Bash", StringComparison.OrdinalIgnoreCase) && intent.CommandLine is { } cmd)
         {

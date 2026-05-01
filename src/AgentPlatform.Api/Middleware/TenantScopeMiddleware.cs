@@ -4,13 +4,11 @@ using AgentPlatform.Domain.Tenants;
 
 namespace AgentPlatform.Api.Middleware;
 
-public sealed class TenantScopeMiddleware
+public sealed class TenantScopeMiddleware(RequestDelegate next)
 {
     public const string TenantClaim = "tenant_id";
 
-    private readonly RequestDelegate _next;
-
-    public TenantScopeMiddleware(RequestDelegate next) => _next = next;
+    private readonly RequestDelegate _next = next;
 
     public Task InvokeAsync(HttpContext context, RequestTenantContext tenantContext)
     {

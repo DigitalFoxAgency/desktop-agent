@@ -47,6 +47,8 @@ export type PhaseEvent =
       cacheCreationTokens: number;
       cacheReadTokens: number;
     }
+  | { type: 'build_semaphore_waiting'; confirmationId: string }
+  | { type: 'build_semaphore_acquired'; confirmationId: string }
   | { type: 'phase_completed'; skill: string; verified: boolean };
 
 export interface PhaseSocket {

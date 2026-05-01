@@ -9,20 +9,12 @@ namespace AgentPlatform.Application.Auth;
 /// Orchestrates sign-up (creates tenant + admin user) and sign-in.
 /// Identity-provider details live behind <see cref="IAuthBackend"/>.
 /// </summary>
-public sealed class AuthService
+public sealed class AuthService(IAuthBackend backend, TenantService tenants, IAuditLog audit, IClock clock)
 {
-    private readonly IAuthBackend _backend;
-    private readonly TenantService _tenants;
-    private readonly IAuditLog _audit;
-    private readonly IClock _clock;
-
-    public AuthService(IAuthBackend backend, TenantService tenants, IAuditLog audit, IClock clock)
-    {
-        _backend = backend;
-        _tenants = tenants;
-        _audit = audit;
-        _clock = clock;
-    }
+    private readonly IAuthBackend _backend = backend;
+    private readonly TenantService _tenants = tenants;
+    private readonly IAuditLog _audit = audit;
+    private readonly IClock _clock = clock;
 
     public async Task<SignUpResult> SignUpAsync(SignUpRequest request, CancellationToken cancellationToken)
     {
