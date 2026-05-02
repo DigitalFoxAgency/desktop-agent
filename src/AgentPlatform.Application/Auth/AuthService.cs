@@ -20,7 +20,19 @@ public sealed class AuthService(IAuthBackend backend, TenantService tenants, IAu
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var tenant = await _tenants.CreateTenantAsync(request.AgencyName, request.AgencySlug, cancellationToken).ConfigureAwait(false);
+        Tenant tenant;
+        try
+        {
+            tenant = await _tenants.CreateTenantAsync(request.AgencyName, request.AgencySlug, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ArgumentException ex)
+        {
+            return new SignUpResult(false, null, null, ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new SignUpResult(false, null, null, ex.Message);
+        }
 
         var auth = await _backend.CreateUserAsync(tenant.Id, request.Email, request.Password, request.DisplayName, cancellationToken).ConfigureAwait(false);
         if (!auth.Succeeded)

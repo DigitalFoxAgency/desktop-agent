@@ -101,7 +101,7 @@ public static class PhaseEndpoints
         var session = sessions.GetActive(phaseRunId);
         if (session is null)
         {
-            return Results.NotFound();
+            return Results.NotFound(new { error = "phase not active" });
         }
         var root = session.WorkingDir;
         var rel = path ?? string.Empty;
@@ -110,9 +110,12 @@ public static class PhaseEndpoints
         {
             return Results.BadRequest(new { error = "path escapes working dir" });
         }
+        // Session is open but Claude may not have created this subdirectory yet.
+        // Return an empty listing instead of 404 so the UI can show "no files yet"
+        // rather than a misleading "not found" error.
         if (!Directory.Exists(fullPath))
         {
-            return Results.NotFound();
+            return Results.Ok(Array.Empty<object>());
         }
         var roles = tenantContext.Roles;
         var entries = Directory.EnumerateFileSystemEntries(fullPath)
